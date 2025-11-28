@@ -1,0 +1,24 @@
+# Build directories
+build/
+*.o
+*.so
+*.a
+
+# Executables
+example
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# CMake files
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile.generated
+
+# Other
+.DS_Store
