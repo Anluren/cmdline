@@ -89,6 +89,56 @@ void Command::addSubcommand(std::shared_ptr<Command> subcommand) {
     subcommands_[subcommand->getName()] = subcommand;
 }
 
+void Command::addOption(const std::string& name, const std::string& description) {
+    options_[name] = description;
+}
+
+ParsedArgs Command::parseArguments(const std::vector<std::string>& args) const {
+    ParsedArgs parsed;
+    
+    for (size_t i = 0; i < args.size(); ++i) {
+        const auto& arg = args[i];
+        
+        // Check if it's an option (starts with --)
+        if (arg.size() > 2 && arg[0] == '-' && arg[1] == '-') {
+            std::string optName = arg.substr(2);
+            
+            // Check if this is a defined option
+            if (options_.find(optName) != options_.end()) {
+                OptionValue optVal;
+                optVal.name = optName;
+                
+                // Get the value (next argument)
+                if (i + 1 < args.size()) {
+                    ++i;
+                    optVal.stringValue = args[i];
+                    
+                    // Try to parse as integer
+                    auto intVal = OptionValue::parseInt(args[i]);
+                    if (intVal) {
+                        optVal.intValue = *intVal;
+                        optVal.isInteger = true;
+                    }
+                    
+                    parsed.options[optName] = optVal;
+                } else {
+                    // Option without value - treat as flag with empty string
+                    optVal.stringValue = "";
+                    parsed.options[optName] = optVal;
+                }
+            } else {
+                // Unknown option - treat as positional
+                parsed.positional.push_back(arg);
+            }
+        } else {
+            // Positional argument
+            parsed.positional.push_back(arg);
+        }
+    }
+    
+    return parsed;
+}
+
 std::vector<std::string> Command::getMatchingCommands(const std::string& prefix) const {
     std::vector<std::string> matches;
     for (const auto& [name, cmd] : subcommands_) {
@@ -101,7 +151,8 @@ std::vector<std::string> Command::getMatchingCommands(const std::string& prefix)
 }
 
 bool Command::execute(const std::vector<std::string>& args) const {
-    return handler_(args);
+    ParsedArgs parsed = parseArguments(args);
+    return handler_(parsed);
 }
 
 // ============================================================================
@@ -116,7 +167,7 @@ Mode::Mode(const std::string& name, const std::string& prompt)
 void Mode::addDefaultCommands() {
     // Add help command
     auto helpCmd = std::make_shared<Command>("help", 
-        [this](const std::vector<std::string>& args) {
+        [this](const ParsedArgs& args) {
             return this->helpHandler(args);
         }, 
         "Show available commands");
@@ -124,19 +175,28 @@ void Mode::addDefaultCommands() {
     
     // Add exit command
     auto exitCmd = std::make_shared<Command>("exit",
-        [this](const std::vector<std::string>& args) {
+        [this](const ParsedArgs& args) {
             return this->exitHandler(args);
         },
         "Exit current mode or application");
     commands_["exit"] = exitCmd;
 }
 
-bool Mode::helpHandler(const std::vector<std::string>& args) {
+bool Mode::helpHandler(const ParsedArgs& args) {
     std::cout << "\nAvailable commands in '" << name_ << "' mode:\n";
     
     for (const auto& [name, cmd] : commands_) {
         std::cout << "  " << std::left << std::setw(20) << name 
                   << " - " << cmd->getDescription() << "\n";
+        
+        // Show options if any
+        const auto& opts = cmd->getOptions();
+        if (!opts.empty()) {
+            for (const auto& [optName, optDesc] : opts) {
+                std::cout << "    --" << std::left << std::setw(16) << optName
+                          << " - " << optDesc << "\n";
+            }
+        }
         
         // Show subcommands if any
         for (const auto& [subname, subcmd] : cmd->getSubcommands()) {
@@ -155,7 +215,7 @@ bool Mode::helpHandler(const std::vector<std::string>& args) {
     return true;
 }
 
-bool Mode::exitHandler(const std::vector<std::string>& args) {
+bool Mode::exitHandler(const ParsedArgs& args) {
     return false; // Return false to exit
 }
 
@@ -229,10 +289,15 @@ std::vector<std::string> CommandLineInterface::getCompletions(const std::string&
     // If line ends with space, complete next token
     if (!line.empty() && (line.back() == ' ' || line.back() == '\t')) {
         if (tokens.size() == 1) {
-            // Complete subcommands
+            // Complete subcommands or options
             auto cmd = currentMode_->getCommand(tokens[0]);
             if (cmd) {
-                return cmd->getMatchingCommands("");
+                auto matches = cmd->getMatchingCommands("");
+                // Add options
+                for (const auto& [optName, optDesc] : cmd->getOptions()) {
+                    matches.push_back("--" + optName);
+                }
+                return matches;
             }
         }
         return {};
@@ -241,10 +306,26 @@ std::vector<std::string> CommandLineInterface::getCompletions(const std::string&
     // Complete current token
     if (tokens.size() == 1) {
         return currentMode_->getMatchingCommands(tokens[0]);
-    } else if (tokens.size() == 2) {
+    } else if (tokens.size() >= 2) {
+        // Check if completing an option
+        if (tokens.back().size() >= 2 && tokens.back()[0] == '-' && tokens.back()[1] == '-') {
+            auto cmd = currentMode_->getCommand(tokens[0]);
+            if (cmd) {
+                std::string prefix = tokens.back().substr(2);
+                std::vector<std::string> matches;
+                for (const auto& [optName, optDesc] : cmd->getOptions()) {
+                    if (optName.find(prefix) == 0) {
+                        matches.push_back("--" + optName);
+                    }
+                }
+                return matches;
+            }
+        }
+        
+        // Complete subcommands
         auto cmd = currentMode_->getCommand(tokens[0]);
         if (cmd) {
-            return cmd->getMatchingCommands(tokens[1]);
+            return cmd->getMatchingCommands(tokens.back());
         }
     }
     
@@ -457,8 +538,8 @@ bool CommandLineInterface::parseAndExecute(const std::string& line) {
     // Check if it's a command
     auto command = currentMode_->getCommand(cmdName);
     if (command) {
-        // Check for subcommands
-        if (!args.empty()) {
+        // Check for subcommands (first non-option argument)
+        if (!args.empty() && args[0][0] != '-') {
             const auto& subcommands = command->getSubcommands();
             auto subIt = subcommands.find(args[0]);
             if (subIt != subcommands.end()) {

@@ -22,3 +22,4 @@ Makefile.generated
 
 # Other
 .DS_Store
+.cache/
