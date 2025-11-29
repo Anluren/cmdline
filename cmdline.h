@@ -17,6 +17,7 @@
 #include <functional>
 #include <optional>
 #include <algorithm>
+#include <array>
 
 namespace cmdline {
 
@@ -221,6 +222,60 @@ private:
     size_t historyIndex_;
     bool running_;
 };
+
+struct OptionSpec {
+    std::string name;
+    std::string description;
+};
+
+struct CommandSpec {
+    std::string name;
+    CommandHandler handler;
+    std::string description;
+    std::vector<OptionSpec> options;
+    std::vector<CommandSpec> subcommands;
+};
+
+struct ModeSpec {
+    std::string name;
+    std::string prompt;
+    std::vector<CommandSpec> commands;
+    std::vector<ModeSpec> submodes;
+};
+
+std::shared_ptr<Command> buildCommand(const CommandSpec& spec);
+std::shared_ptr<Mode> buildMode(const ModeSpec& spec);
+
+template <typename OptContainer, typename SubContainer>
+std::shared_ptr<Command> buildCommand(const std::string& name,
+                                      CommandHandler handler,
+                                      const std::string& description,
+                                      const OptContainer& options,
+                                      const SubContainer& subcommands) {
+    auto cmd = std::make_shared<Command>(name, handler, description);
+    for (const auto& opt : options) {
+        cmd->addOption(opt.name, opt.description);
+    }
+    for (const auto& sub : subcommands) {
+        cmd->addSubcommand(buildCommand(sub));
+    }
+    return cmd;
+}
+
+template <typename CmdContainer, typename ModeContainer>
+std::shared_ptr<Mode> buildMode(const std::string& name,
+                                const std::string& prompt,
+                                const CmdContainer& commands,
+                                const ModeContainer& submodes) {
+    auto mode = std::make_shared<Mode>(name, prompt);
+    for (const auto& c : commands) {
+        mode->addCommand(buildCommand(c));
+    }
+    for (const auto& m : submodes) {
+        mode->addSubmode(buildMode(m));
+    }
+    return mode;
+}
 
 } // namespace cmdline
 

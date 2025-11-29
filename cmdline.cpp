@@ -618,3 +618,29 @@ void CommandLineInterface::run() {
 }
 
 } // namespace cmdline
+
+namespace cmdline {
+
+std::shared_ptr<Command> buildCommand(const CommandSpec& spec) {
+    auto cmd = std::make_shared<Command>(spec.name, spec.handler, spec.description);
+    for (const auto& opt : spec.options) {
+        cmd->addOption(opt.name, opt.description);
+    }
+    for (const auto& sub : spec.subcommands) {
+        cmd->addSubcommand(buildCommand(sub));
+    }
+    return cmd;
+}
+
+std::shared_ptr<Mode> buildMode(const ModeSpec& spec) {
+    auto mode = std::make_shared<Mode>(spec.name, spec.prompt);
+    for (const auto& c : spec.commands) {
+        mode->addCommand(buildCommand(c));
+    }
+    for (const auto& m : spec.submodes) {
+        mode->addSubmode(buildMode(m));
+    }
+    return mode;
+}
+
+} // namespace cmdline

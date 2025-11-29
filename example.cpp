@@ -5,6 +5,7 @@
 #include "cmdline.h"
 #include <iostream>
 #include <iomanip>
+#include <array>
 
 using namespace cmdline;
 
@@ -129,66 +130,89 @@ bool wifiJoinHandler(const ParsedArgs& args) {
 }
 
 int main() {
-    // Create root mode
-    auto root = std::make_shared<Mode>("main", "> ");
-    
-    // Add commands to root mode
-    auto showCmd = std::make_shared<Command>("show", showHandler, 
-                                             "Display information");
-    showCmd->addOption("verbose", "Enable verbose output");
-    showCmd->addOption("count", "Number of items to show (hex/dec/bin)");
-    root->addCommand(showCmd);
-    
-    // Create config command with subcommands
-    auto configCmd = std::make_shared<Command>("config", configHandler,
-                                               "Configuration management");
-    
-    auto setCmd = std::make_shared<Command>("set", setHandler, "Set a configuration value");
-    setCmd->addOption("timeout", "Timeout in milliseconds (supports 0x for hex, 0b for binary)");
-    configCmd->addSubcommand(setCmd);
-    
-    configCmd->addSubcommand(std::make_shared<Command>("get", getHandler,
-                                                        "Get a configuration value"));
-    configCmd->addSubcommand(std::make_shared<Command>("list", listHandler,
-                                                        "List all configurations"));
-    root->addCommand(configCmd);
-    
-    // Create network mode
-    auto networkMode = std::make_shared<Mode>("network", "net> ");
-    networkMode->addCommand(std::make_shared<Command>("status", statusHandler,
-                                                       "Show network status"));
-    
-    auto connectCmd = std::make_shared<Command>("connect", connectHandler, "Connect to a network");
-    connectCmd->addOption("port", "Port number (hex: 0x1234, dec: 4660, bin: 0b1001001110100)");
-    connectCmd->addOption("retry", "Number of retries");
-    networkMode->addCommand(connectCmd);
-    networkMode->addCommand(std::make_shared<Command>("disconnect", disconnectHandler,
-                                                       "Disconnect from network"));
-    
-    // Add network mode as submode of root
-    root->addSubmode(networkMode);
-    
-    // Create system mode
-    auto systemMode = std::make_shared<Mode>("system", "sys> ");
-    systemMode->addCommand(std::make_shared<Command>("info", systemInfoHandler,
-                                                      "Show system information"));
-    systemMode->addCommand(std::make_shared<Command>("reboot", rebootHandler,
-                                                      "Reboot the system"));
-    
-    // Add system mode as submode of root
-    root->addSubmode(systemMode);
-    
-    // Create wifi mode (nested under network)
-    auto wifiMode = std::make_shared<Mode>("wifi", "wifi> ");
-    wifiMode->addCommand(std::make_shared<Command>("scan", wifiScanHandler,
-                                                    "Scan for WiFi networks"));
-    wifiMode->addCommand(std::make_shared<Command>("join", wifiJoinHandler,
-                                                    "Join a WiFi network"));
-    
-    // Add wifi as submode of network (multi-level nesting)
-    networkMode->addSubmode(wifiMode);
-    
-    // Create and run CLI
+    const std::array showOpts{
+        OptionSpec{"verbose", "Enable verbose output"},
+        OptionSpec{"count", "Number of items to show (hex/dec/bin)"}
+    };
+
+    const std::array setOpts{
+        OptionSpec{"timeout", "Timeout in milliseconds (supports 0x for hex, 0b for binary)"}
+    };
+
+    const std::array connectOpts{
+        OptionSpec{"port", "Port number (hex: 0x1234, dec: 4660, bin: 0b1001001110100)"},
+        OptionSpec{"retry", "Number of retries"}
+    };
+
+    ModeSpec rootSpec{
+        "main",
+        "> ",
+        {
+            CommandSpec{
+                "show",
+                showHandler,
+                "Display information",
+                std::vector<OptionSpec>(showOpts.begin(), showOpts.end()),
+                {}
+            },
+            CommandSpec{
+                "config",
+                configHandler,
+                "Configuration management",
+                {},
+                {
+                    CommandSpec{
+                        "set",
+                        setHandler,
+                        "Set a configuration value",
+                        std::vector<OptionSpec>(setOpts.begin(), setOpts.end()),
+                        {}
+                    },
+                    CommandSpec{ "get", getHandler, "Get a configuration value", {}, {} },
+                    CommandSpec{ "list", listHandler, "List all configurations", {}, {} }
+                }
+            }
+        },
+        {
+            ModeSpec{
+                "network",
+                "net> ",
+                {
+                    CommandSpec{ "status", statusHandler, "Show network status", {}, {} },
+                    CommandSpec{
+                        "connect",
+                        connectHandler,
+                        "Connect to a network",
+                        std::vector<OptionSpec>(connectOpts.begin(), connectOpts.end()),
+                        {}
+                    },
+                    CommandSpec{ "disconnect", disconnectHandler, "Disconnect from network", {}, {} }
+                },
+                {
+                    ModeSpec{
+                        "wifi",
+                        "wifi> ",
+                        {
+                            CommandSpec{ "scan", wifiScanHandler, "Scan for WiFi networks", {}, {} },
+                            CommandSpec{ "join", wifiJoinHandler, "Join a WiFi network", {}, {} }
+                        },
+                        {}
+                    }
+                }
+            },
+            ModeSpec{
+                "system",
+                "sys> ",
+                {
+                    CommandSpec{ "info", systemInfoHandler, "Show system information", {}, {} },
+                    CommandSpec{ "reboot", rebootHandler, "Reboot the system", {}, {} }
+                },
+                {}
+            }
+        }
+    };
+
+    auto root = buildMode(rootSpec);
     CommandLineInterface cli(root);
     cli.run();
     
