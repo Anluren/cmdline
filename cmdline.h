@@ -11,6 +11,7 @@
 #define CMDLINE_H
 
 #include <string>
+#include <string_view>
 #include <vector>
 #include <map>
 #include <memory>
@@ -102,14 +103,14 @@ using CommandHandler = std::function<bool(const ParsedArgs&)>;
  */
 class Command {
 public:
-    Command(const std::string& name, CommandHandler handler, 
-            const std::string& description = "");
+    Command(std::string_view name, CommandHandler handler, 
+            std::string_view description = "");
     
     // Add a subcommand to this command
     void addSubcommand(std::shared_ptr<Command> subcommand);
     
     // Define an option for this command
-    void addOption(const std::string& name, const std::string& description = "");
+    void addOption(std::string_view name, std::string_view description = "");
     
     // Get all subcommands that match the given prefix
     std::vector<std::string> getMatchingCommands(const std::string& prefix) const;
@@ -143,7 +144,7 @@ private:
  */
 class Mode : public std::enable_shared_from_this<Mode> {
 public:
-    Mode(const std::string& name, const std::string& prompt = "> ");
+    Mode(std::string_view name, std::string_view prompt = "> ");
     
     // Add a command to this mode
     void addCommand(std::shared_ptr<Command> command);

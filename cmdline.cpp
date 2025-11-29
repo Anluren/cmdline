@@ -80,8 +80,8 @@ namespace {
 // Command Implementation
 // ============================================================================
 
-Command::Command(const std::string& name, CommandHandler handler, 
-                 const std::string& description)
+Command::Command(std::string_view name, CommandHandler handler, 
+                 std::string_view description)
     : name_(name), handler_(handler), description_(description) {
 }
 
@@ -89,8 +89,8 @@ void Command::addSubcommand(std::shared_ptr<Command> subcommand) {
     subcommands_[subcommand->getName()] = subcommand;
 }
 
-void Command::addOption(const std::string& name, const std::string& description) {
-    options_[name] = description;
+void Command::addOption(std::string_view name, std::string_view description) {
+    options_[std::string(name)] = description;
 }
 
 ParsedArgs Command::parseArguments(const std::vector<std::string>& args) const {
@@ -159,7 +159,7 @@ bool Command::execute(const std::vector<std::string>& args) const {
 // Mode Implementation
 // ============================================================================
 
-Mode::Mode(const std::string& name, const std::string& prompt)
+Mode::Mode(std::string_view name, std::string_view prompt)
     : name_(name), prompt_(prompt) {
     addDefaultCommands();
 }
