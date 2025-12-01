@@ -336,6 +336,14 @@ public:
     constexpr std::string_view getName() const { return spec_.name; }
     constexpr std::string_view getDescription() const { return spec_.description; }
     
+    // Helper to check if a string is an option (either '--name' or a known option name)
+    bool isOption(const std::string& arg) const {
+        if (arg.size() > 2 && arg[0] == '-' && arg[1] == '-') {
+            return spec_.getOptionSpec(arg.substr(2)) != nullptr;
+        }
+        return spec_.getOptionSpec(arg) != nullptr;
+    }
+    
     // Execute: parse arguments then invoke handler
     bool execute(const std::vector<std::string>& args) const {
         ParsedArgs parsed = parse(args);
@@ -349,16 +357,24 @@ public:
         for (size_t i = 0; i < args.size(); ++i) {
             const auto& arg = args[i];
             
-            // Check if it's an option (starts with --)
+            // Check if it's an option (starts with -- or matches option name directly)
+            std::string optName;
+            const AnyOption* optSpec = nullptr;
+            
             if (arg.size() > 2 && arg[0] == '-' && arg[1] == '-') {
-                std::string optName = arg.substr(2);
-                
-                // Get option spec to determine type
-                const AnyOption* optSpec = spec_.getOptionSpec(optName);
-                if (!optSpec) {
-                    // Unknown option, skip
-                    continue;
+                // Option with '--' prefix
+                optName = arg.substr(2);
+                optSpec = spec_.getOptionSpec(optName);
+            } else {
+                // Try matching without prefix
+                optSpec = spec_.getOptionSpec(arg);
+                if (optSpec) {
+                    optName = arg;
                 }
+            }
+            
+            if (optSpec) {
+                // Found a valid option
                 
                 OptionValue val;
                 val.name = optName;
@@ -389,8 +405,7 @@ public:
                 } else if (optSpec->is_int && optSpec->is_array) {
                     // Array of integers - collect until next option or end
                     std::vector<int64_t> arr;
-                    while (i + 1 < args.size() && !(args[i + 1].size() > 2 && 
-                           args[i + 1][0] == '-' && args[i + 1][1] == '-')) {
+                    while (i + 1 < args.size() && !isOption(args[i + 1])) {
                         ++i;
                         if (auto intVal = OptionValue::parseInt(args[i])) {
                             // Validate range if specified
@@ -404,8 +419,7 @@ public:
                 } else if (!optSpec->is_int && optSpec->is_array) {
                     // Array of strings - collect until next option or end
                     std::vector<std::string> arr;
-                    while (i + 1 < args.size() && !(args[i + 1].size() > 2 && 
-                           args[i + 1][0] == '-' && args[i + 1][1] == '-')) {
+                    while (i + 1 < args.size() && !isOption(args[i + 1])) {
                         ++i;
                         arr.push_back(args[i]);
                     }
