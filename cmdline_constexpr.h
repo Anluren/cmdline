@@ -571,13 +571,13 @@ public:
     
     // Register a mode with its command handler
     // Handler returns the next mode name (or empty string to stay in current mode)
-    void addMode(const std::string& modeName, ModeHandler handler) {
-        modes_[modeName] = handler;
+    void addMode(std::string_view modeName, ModeHandler handler) {
+        modes_[std::string(modeName)] = handler;
     }
     
     // Register a subcommand dispatcher as a mode
-    void addMode(const std::string& modeName, std::shared_ptr<SubcommandDispatcher> dispatcher) {
-        modes_[modeName] = [dispatcher](const std::vector<std::string>& args) -> std::string {
+    void addMode(std::string_view modeName, std::shared_ptr<SubcommandDispatcher> dispatcher) {
+        modes_[std::string(modeName)] = [dispatcher](const std::vector<std::string>& args) -> std::string {
             dispatcher->execute(args);
             return ""; // Stay in current mode
         };
@@ -585,8 +585,8 @@ public:
     
     // Register a command as a mode
     template<typename OptGroup, typename HandlerType>
-    void addMode(const std::string& modeName, std::shared_ptr<Command<OptGroup, HandlerType>> cmd) {
-        modes_[modeName] = [cmd](const std::vector<std::string>& args) -> std::string {
+    void addMode(std::string_view modeName, std::shared_ptr<Command<OptGroup, HandlerType>> cmd) {
+        modes_[std::string(modeName)] = [cmd](const std::vector<std::string>& args) -> std::string {
             cmd->execute(args);
             return ""; // Stay in current mode
         };
@@ -640,11 +640,12 @@ public:
     }
     
     // Get current mode name
-    std::string getCurrentMode() const { return currentMode_; }
+    std::string_view getCurrentMode() const { return currentMode_; }
     
     // Set current mode
-    bool setMode(const std::string& modeName) {
-        if (modes_.find(modeName) != modes_.end()) {
+    bool setMode(std::string_view modeName) {
+        auto it = modes_.find(std::string(modeName));
+        if (it != modes_.end()) {
             currentMode_ = modeName;
             return true;
         }
@@ -652,8 +653,8 @@ public:
     }
     
     // Check if mode exists
-    bool hasMode(const std::string& modeName) const {
-        return modes_.find(modeName) != modes_.end();
+    bool hasMode(std::string_view modeName) const {
+        return modes_.find(std::string(modeName)) != modes_.end();
     }
     
     // Get all mode names
