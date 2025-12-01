@@ -12,6 +12,8 @@ test_lambda_types
 test_parse_invoke
 test_typed_options
 test_variadic_groups
+test_int_range
+test_array_range
 
 # IDE files
 .vscode/

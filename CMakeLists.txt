@@ -81,6 +81,22 @@ target_include_directories(test_variadic_groups PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
+add_executable(test_int_range
+    test_int_range.cpp
+)
+
+target_include_directories(test_int_range PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}
+)
+
+add_executable(test_array_range
+    test_array_range.cpp
+)
+
+target_include_directories(test_array_range PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}
+)
+
 # Install targets
 install(TARGETS cmdline
     LIBRARY DESTINATION lib

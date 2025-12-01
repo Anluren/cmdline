@@ -35,11 +35,28 @@ struct OptionSpecBase {
 };
 
 /**
- * Integer option specification
+ * Integer option specification with optional range validation
  */
 struct IntOption : OptionSpecBase {
+    std::optional<int64_t> min_value;
+    std::optional<int64_t> max_value;
+    
     constexpr IntOption(std::string_view n, std::string_view d = "", bool req = false)
-        : OptionSpecBase(n, d, req) {}
+        : OptionSpecBase(n, d, req), min_value(std::nullopt), max_value(std::nullopt) {}
+    
+    constexpr IntOption(std::string_view n, std::string_view d, bool req,
+                       int64_t min_val, int64_t max_val)
+        : OptionSpecBase(n, d, req), min_value(min_val), max_value(max_val) {}
+    
+    constexpr IntOption(std::string_view n, std::string_view d, int64_t min_val, int64_t max_val)
+        : OptionSpecBase(n, d, false), min_value(min_val), max_value(max_val) {}
+    
+    // Validate value is within range
+    constexpr bool isValid(int64_t value) const {
+        if (min_value && value < *min_value) return false;
+        if (max_value && value > *max_value) return false;
+        return true;
+    }
     
     using value_type = int64_t;
     static constexpr bool is_array = false;
@@ -57,11 +74,28 @@ struct StringOption : OptionSpecBase {
 };
 
 /**
- * Integer array option specification
+ * Integer array option specification with optional range validation
  */
 struct IntArrayOption : OptionSpecBase {
+    std::optional<int64_t> min_value;
+    std::optional<int64_t> max_value;
+    
     constexpr IntArrayOption(std::string_view n, std::string_view d = "", bool req = false)
-        : OptionSpecBase(n, d, req) {}
+        : OptionSpecBase(n, d, req), min_value(std::nullopt), max_value(std::nullopt) {}
+    
+    constexpr IntArrayOption(std::string_view n, std::string_view d, bool req,
+                            int64_t min_val, int64_t max_val)
+        : OptionSpecBase(n, d, req), min_value(min_val), max_value(max_val) {}
+    
+    constexpr IntArrayOption(std::string_view n, std::string_view d, int64_t min_val, int64_t max_val)
+        : OptionSpecBase(n, d, false), min_value(min_val), max_value(max_val) {}
+    
+    // Validate value is within range
+    constexpr bool isValid(int64_t value) const {
+        if (min_value && value < *min_value) return false;
+        if (max_value && value > *max_value) return false;
+        return true;
+    }
     
     using value_type = std::vector<int64_t>;
     static constexpr bool is_array = true;
@@ -115,14 +149,37 @@ struct AnyOption {
     bool required;
     bool is_int;
     bool is_array;
+    std::optional<int64_t> min_value;
+    std::optional<int64_t> max_value;
     
     constexpr AnyOption() 
-        : name(""), description(""), required(false), is_int(false), is_array(false) {}
+        : name(""), description(""), required(false), is_int(false), is_array(false),
+          min_value(std::nullopt), max_value(std::nullopt) {}
     
     template<typename OptType>
     constexpr AnyOption(const OptType& opt)
         : name(opt.name), description(opt.description), required(opt.required),
-          is_int(is_int_option<OptType>::value), is_array(is_array_option<OptType>::value) {}
+          is_int(is_int_option<OptType>::value), is_array(is_array_option<OptType>::value),
+          min_value(std::nullopt), max_value(std::nullopt) {}
+    
+    // Specialized constructor for IntOption to capture range
+    constexpr AnyOption(const IntOption& opt)
+        : name(opt.name), description(opt.description), required(opt.required),
+          is_int(true), is_array(false),
+          min_value(opt.min_value), max_value(opt.max_value) {}
+    
+    // Specialized constructor for IntArrayOption to capture range
+    constexpr AnyOption(const IntArrayOption& opt)
+        : name(opt.name), description(opt.description), required(opt.required),
+          is_int(true), is_array(true),
+          min_value(opt.min_value), max_value(opt.max_value) {}
+    
+    // Validate integer value against range
+    constexpr bool isValid(int64_t value) const {
+        if (min_value && value < *min_value) return false;
+        if (max_value && value > *max_value) return false;
+        return true;
+    }
 };
 
 /**
@@ -309,7 +366,16 @@ public:
                     if (i + 1 < args.size()) {
                         std::string optValue = args[i + 1];
                         ++i;
-                        val.intValue = OptionValue::parseInt(optValue);
+                        auto parsedValue = OptionValue::parseInt(optValue);
+                        if (parsedValue) {
+                            // Validate range if specified
+                            if (optSpec->isValid(*parsedValue)) {
+                                val.intValue = parsedValue;
+                            } else {
+                                // Value out of range - could add error reporting here
+                                // For now, skip this option
+                            }
+                        }
                     }
                 } else if (!optSpec->is_int && !optSpec->is_array) {
                     // Single string
@@ -324,7 +390,11 @@ public:
                            args[i + 1][0] == '-' && args[i + 1][1] == '-')) {
                         ++i;
                         if (auto intVal = OptionValue::parseInt(args[i])) {
-                            arr.push_back(*intVal);
+                            // Validate range if specified
+                            if (optSpec->isValid(*intVal)) {
+                                arr.push_back(*intVal);
+                            }
+                            // Skip values that are out of range
                         }
                     }
                     val.intArray = arr;
