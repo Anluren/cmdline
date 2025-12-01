@@ -11,13 +11,16 @@ int main() {
     std::cout << "Demonstrating Separated Parse and Invoke\n";
     std::cout << "=========================================\n\n";
     
-    // Define command spec
+    // Define command spec with typed options
+    constexpr IntOption portOpt{"port", "Port number"};
+    constexpr IntOption retryOpt{"retry", "Retry count"};
+    
     constexpr auto connectSpec = CommandSpec<2>(
         "connect",
         "Connect to a server",
         makeOptions(
-            OptionSpec{"port", "Port number"},
-            OptionSpec{"retry", "Retry count"}
+            AnyOption{portOpt},
+            AnyOption{retryOpt}
         )
     );
     
@@ -58,10 +61,10 @@ int main() {
     std::cout << "  [PARSE] Parsed options:\n";
     for (const auto& [name, val] : parsed.options) {
         std::cout << "    --" << name << " = ";
-        if (val.isInteger) {
-            std::cout << val.intValue << " (0x" << std::hex << val.intValue << std::dec << ")";
-        } else {
-            std::cout << "\"" << val.stringValue << "\"";
+        if (val.intValue) {
+            std::cout << *val.intValue << " (0x" << std::hex << *val.intValue << std::dec << ")";
+        } else if (val.stringValue) {
+            std::cout << "\"" << *val.stringValue << "\"";
         }
         std::cout << "\n";
     }
@@ -107,7 +110,6 @@ int main() {
         defaultPort.name = "port";
         defaultPort.intValue = 80;
         defaultPort.stringValue = "80";
-        defaultPort.isInteger = true;
         parsed3.options["port"] = defaultPort;
     }
     

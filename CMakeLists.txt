@@ -40,6 +40,47 @@ target_include_directories(example_constexpr PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
+# Test executables for compile-time features
+add_executable(constexpr_test
+    constexpr_test.cpp
+)
+
+target_include_directories(constexpr_test PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}
+)
+
+add_executable(test_lambda_types
+    test_lambda_types.cpp
+)
+
+target_include_directories(test_lambda_types PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}
+)
+
+add_executable(test_parse_invoke
+    test_parse_invoke.cpp
+)
+
+target_include_directories(test_parse_invoke PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}
+)
+
+add_executable(test_typed_options
+    test_typed_options.cpp
+)
+
+target_include_directories(test_typed_options PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}
+)
+
+add_executable(test_variadic_groups
+    test_variadic_groups.cpp
+)
+
+target_include_directories(test_variadic_groups PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}
+)
+
 # Install targets
 install(TARGETS cmdline
     LIBRARY DESTINATION lib
@@ -47,6 +88,10 @@ install(TARGETS cmdline
 )
 
 install(FILES cmdline.h
+    DESTINATION include
+)
+
+install(FILES cmdline_constexpr.h
     DESTINATION include
 )
 
