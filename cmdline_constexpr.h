@@ -559,6 +559,122 @@ inline auto makeDispatcher(std::string_view name, std::string_view description =
     return std::make_shared<SubcommandDispatcher>(name, description);
 }
 
+/**
+ * Mode manager for interactive command mode transitions
+ * Allows switching between different command contexts (modes)
+ */
+class ModeManager {
+public:
+    using ModeHandler = std::function<std::string(const std::vector<std::string>&)>;
+    
+    ModeManager() : currentMode_("default") {}
+    
+    // Register a mode with its command handler
+    // Handler returns the next mode name (or empty string to stay in current mode)
+    void addMode(const std::string& modeName, ModeHandler handler) {
+        modes_[modeName] = handler;
+    }
+    
+    // Register a subcommand dispatcher as a mode
+    void addMode(const std::string& modeName, std::shared_ptr<SubcommandDispatcher> dispatcher) {
+        modes_[modeName] = [dispatcher](const std::vector<std::string>& args) -> std::string {
+            dispatcher->execute(args);
+            return ""; // Stay in current mode
+        };
+    }
+    
+    // Register a command as a mode
+    template<typename OptGroup, typename HandlerType>
+    void addMode(const std::string& modeName, std::shared_ptr<Command<OptGroup, HandlerType>> cmd) {
+        modes_[modeName] = [cmd](const std::vector<std::string>& args) -> std::string {
+            cmd->execute(args);
+            return ""; // Stay in current mode
+        };
+    }
+    
+    // Execute command in current mode
+    // Returns the next mode to transition to (or empty to stay)
+    std::string execute(const std::vector<std::string>& args) {
+        if (args.empty()) {
+            return "";
+        }
+        
+        // Check for mode transition commands
+        if (args[0] == "exit" || args[0] == "quit") {
+            return "exit";
+        }
+        
+        if (args[0] == "mode") {
+            if (args.size() > 1) {
+                std::string newMode = args[1];
+                if (modes_.find(newMode) != modes_.end()) {
+                    currentMode_ = newMode;
+                    std::cout << "Switched to mode: " << newMode << "\n";
+                    return newMode;
+                } else {
+                    std::cerr << "Unknown mode: " << newMode << "\n";
+                    return "";
+                }
+            } else {
+                std::cout << "Current mode: " << currentMode_ << "\n";
+                std::cout << "Available modes:\n";
+                for (const auto& [name, _] : modes_) {
+                    std::cout << "  " << name << "\n";
+                }
+                return "";
+            }
+        }
+        
+        // Execute in current mode
+        auto it = modes_.find(currentMode_);
+        if (it != modes_.end()) {
+            std::string nextMode = it->second(args);
+            if (!nextMode.empty() && nextMode != "exit") {
+                currentMode_ = nextMode;
+            }
+            return nextMode;
+        }
+        
+        std::cerr << "No handler for mode: " << currentMode_ << "\n";
+        return "";
+    }
+    
+    // Get current mode name
+    std::string getCurrentMode() const { return currentMode_; }
+    
+    // Set current mode
+    bool setMode(const std::string& modeName) {
+        if (modes_.find(modeName) != modes_.end()) {
+            currentMode_ = modeName;
+            return true;
+        }
+        return false;
+    }
+    
+    // Check if mode exists
+    bool hasMode(const std::string& modeName) const {
+        return modes_.find(modeName) != modes_.end();
+    }
+    
+    // Get all mode names
+    std::vector<std::string> getModes() const {
+        std::vector<std::string> result;
+        for (const auto& [name, _] : modes_) {
+            result.push_back(name);
+        }
+        return result;
+    }
+    
+private:
+    std::string currentMode_;
+    std::map<std::string, ModeHandler> modes_;
+};
+
+// Helper to create mode manager
+inline auto makeModeManager() {
+    return std::make_shared<ModeManager>();
+}
+
 } // namespace cmdline_ct
 
 #endif // CMDLINE_CONSTEXPR_H

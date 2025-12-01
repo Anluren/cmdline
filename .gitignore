@@ -16,6 +16,7 @@ test_int_range
 test_array_range
 test_option_matching
 test_subcommands
+test_mode_manager
 
 # IDE files
 .vscode/
