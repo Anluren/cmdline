@@ -15,6 +15,7 @@
 #include <vector>
 #include <string>
 #include <memory>
+#include <iostream>
 
 namespace cmdline_ct {
 
@@ -463,6 +464,99 @@ constexpr auto makeOptionGroup(std::string_view name, std::string_view descripti
 template<typename... Args>
 constexpr auto makeOptions(Args... args) {
     return OptionGroup<Args...>{"", "", args...};
+}
+
+/**
+ * Subcommand dispatcher
+ * Manages multiple subcommands under a parent command
+ */
+class SubcommandDispatcher {
+public:
+    using SubcommandMap = std::map<std::string, std::shared_ptr<void>>;
+    using SubcommandHandler = std::function<bool(const std::vector<std::string>&)>;
+    
+    SubcommandDispatcher(std::string_view name, std::string_view description = "")
+        : name_(name), description_(description) {}
+    
+    // Add a subcommand
+    template<typename OptGroup, typename HandlerType>
+    void addSubcommand(std::shared_ptr<Command<OptGroup, HandlerType>> cmd) {
+        std::string cmdName(cmd->getName());
+        subcommands_[cmdName] = cmd;
+        handlers_[cmdName] = [cmd](const std::vector<std::string>& args) {
+            return cmd->execute(args);
+        };
+    }
+    
+    // Execute with subcommand dispatch
+    bool execute(const std::vector<std::string>& args) {
+        if (args.empty()) {
+            showHelp();
+            return false;
+        }
+        
+        const std::string& subcmdName = args[0];
+        
+        // Special commands
+        if (subcmdName == "help" || subcmdName == "--help" || subcmdName == "-h") {
+            if (args.size() > 1) {
+                return showSubcommandHelp(args[1]);
+            }
+            showHelp();
+            return true;
+        }
+        
+        // Find and execute subcommand
+        auto it = handlers_.find(subcmdName);
+        if (it != handlers_.end()) {
+            // Pass remaining args to subcommand
+            std::vector<std::string> subcmdArgs(args.begin() + 1, args.end());
+            return it->second(subcmdArgs);
+        }
+        
+        std::cerr << "Unknown subcommand: " << subcmdName << "\n";
+        std::cerr << "Run '" << name_ << " help' for usage.\n";
+        return false;
+    }
+    
+    // Show help for all subcommands
+    void showHelp() const {
+        std::cout << name_ << ": " << description_ << "\n\n";
+        std::cout << "Available subcommands:\n";
+        for (const auto& [name, _] : handlers_) {
+            std::cout << "  " << name << "\n";
+        }
+        std::cout << "\nUse '" << name_ << " help <subcommand>' for more information.\n";
+    }
+    
+    // Show help for specific subcommand
+    bool showSubcommandHelp(const std::string& subcmdName) const {
+        auto it = handlers_.find(subcmdName);
+        if (it == handlers_.end()) {
+            std::cerr << "Unknown subcommand: " << subcmdName << "\n";
+            return false;
+        }
+        
+        std::cout << "Subcommand: " << subcmdName << "\n";
+        // Note: Could enhance this to show subcommand options
+        return true;
+    }
+    
+    std::string_view getName() const { return name_; }
+    std::string_view getDescription() const { return description_; }
+    
+    const SubcommandMap& getSubcommands() const { return subcommands_; }
+    
+private:
+    std::string name_;
+    std::string description_;
+    SubcommandMap subcommands_;
+    std::map<std::string, SubcommandHandler> handlers_;
+};
+
+// Helper to create subcommand dispatcher
+inline auto makeDispatcher(std::string_view name, std::string_view description = "") {
+    return std::make_shared<SubcommandDispatcher>(name, description);
 }
 
 } // namespace cmdline_ct

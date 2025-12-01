@@ -15,6 +15,7 @@ test_variadic_groups
 test_int_range
 test_array_range
 test_option_matching
+test_subcommands
 
 # IDE files
 .vscode/

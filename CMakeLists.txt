@@ -105,6 +105,14 @@ target_include_directories(test_option_matching PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
+add_executable(test_subcommands
+    test_subcommands.cpp
+)
+
+target_include_directories(test_subcommands PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}
+)
+
 # Install targets
 install(TARGETS cmdline
     LIBRARY DESTINATION lib
