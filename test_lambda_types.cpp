@@ -5,8 +5,8 @@
 using namespace cmdline_ct;
 
 int main() {
-    constexpr auto spec1 = CommandSpec<0>("test1", "Test 1");
-    constexpr auto spec2 = CommandSpec<0>("test2", "Test 2");
+    constexpr auto spec1 = CommandSpec("test1", "Test 1", makeOptions());
+    constexpr auto spec2 = CommandSpec("test2", "Test 2", makeOptions());
     
     // Each lambda creates a unique type
     auto cmd1 = makeCommand(spec1, [](const ParsedArgs&) { 

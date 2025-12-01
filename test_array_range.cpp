@@ -16,14 +16,10 @@ int main() {
     constexpr IntArrayOption scoresOpt{"scores", "Test scores (0-100)", 0, 100};
     constexpr IntArrayOption unboundedOpt{"values", "Unbounded values"};
     
-    constexpr auto batchSpec = CommandSpec<3>(
+    constexpr auto batchSpec = CommandSpec(
         "batch",
         "Process batch of values with range validation",
-        makeOptions(
-            AnyOption{portsOpt},
-            AnyOption{scoresOpt},
-            AnyOption{unboundedOpt}
-        )
+        makeOptions(portsOpt, scoresOpt, unboundedOpt)
     );
     
     auto batchCmd = makeCommand(batchSpec, [](const ParsedArgs& args) {

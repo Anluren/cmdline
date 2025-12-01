@@ -36,12 +36,13 @@ int main() {
     std::cout << "Test 1: Single value options\n";
     std::cout << "-----------------------------\n";
     
-    constexpr auto connectSpec = CommandSpec<3>(
+    constexpr auto connectSpec = CommandSpec(
         "connect",
         "Connect to server",
-        mergeWithGroup(
-            makeOptions(IntOption{"timeout", "Connection timeout"}),
-            networkGroup
+        makeOptions(
+            StringOption{"host", "Server hostname", true},
+            IntOption{"port", "Port number", false},
+            IntOption{"timeout", "Connection timeout"}
         )
     );
     
@@ -64,7 +65,7 @@ int main() {
     std::cout << "\n\nTest 2: Integer array options\n";
     std::cout << "------------------------------\n";
     
-    constexpr auto configSpec = CommandSpec<2>(
+    constexpr auto configSpec = CommandSpec(
         "config",
         "Configure settings",
         makeOptions(
@@ -93,7 +94,7 @@ int main() {
     std::cout << "\n\nTest 3: String array options\n";
     std::cout << "-----------------------------\n";
     
-    constexpr auto deploySpec = CommandSpec<2>(
+    constexpr auto deploySpec = CommandSpec(
         "deploy",
         "Deploy to servers",
         makeOptions(
@@ -121,10 +122,15 @@ int main() {
     std::cout << "\n\nTest 4: Multiple option groups composition\n";
     std::cout << "--------------------------------------------\n";
     
-    constexpr auto advancedConnectSpec = CommandSpec<4>(
+    constexpr auto advancedConnectSpec = CommandSpec(
         "advanced-connect",
         "Connect with full options",
-        mergeGroups(networkGroup, retryGroup)
+        makeOptions(
+            StringOption{"host", "Server hostname", true},
+            IntOption{"port", "Port number", false},
+            IntOption{"retry", "Number of retries"},
+            IntOption{"timeout", "Timeout in milliseconds"}
+        )
     );
     
     auto advConnectCmd = makeCommand(advancedConnectSpec, [](const ParsedArgs& args) {
@@ -153,7 +159,7 @@ int main() {
     std::cout << "\n\nTest 5: Mixed positional and typed options\n";
     std::cout << "-------------------------------------------\n";
     
-    constexpr auto copySpec = CommandSpec<2>(
+    constexpr auto copySpec = CommandSpec(
         "copy",
         "Copy files",
         makeOptions(

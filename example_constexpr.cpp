@@ -11,7 +11,7 @@ using namespace cmdline_ct;
 // Define command specifications at compile time using typed option classes
 namespace Commands {
     // Show command with compile-time options
-    constexpr auto showSpec = CommandSpec<2>(
+    constexpr auto showSpec = CommandSpec(
         "show",
         "Display information",
         makeOptions(
@@ -21,7 +21,7 @@ namespace Commands {
     );
     
     // Connect command with compile-time options
-    constexpr auto connectSpec = CommandSpec<2>(
+    constexpr auto connectSpec = CommandSpec(
         "connect",
         "Connect to a network",
         makeOptions(
@@ -31,7 +31,7 @@ namespace Commands {
     );
     
     // Set command with compile-time options
-    constexpr auto setSpec = CommandSpec<1>(
+    constexpr auto setSpec = CommandSpec(
         "set",
         "Set a configuration value",
         makeOptions(
@@ -40,11 +40,11 @@ namespace Commands {
     );
     
     // Simple commands without options
-    constexpr auto statusSpec = CommandSpec<0>("status", "Show status");
-    constexpr auto listSpec = CommandSpec<0>("list", "List all items");
+    constexpr auto statusSpec = CommandSpec("status", "Show status", makeOptions());
+    constexpr auto listSpec = CommandSpec("list", "List all items", makeOptions());
     
     // Compile-time validation - these are evaluated at compile time!
-    static_assert(showSpec.options.size() == 2);
+    static_assert(showSpec.numOptions() == 2);
     static_assert(showSpec.name == "show");
     static_assert(connectSpec.findOption("port").has_value());
     static_assert(connectSpec.findOption("invalid") == std::nullopt);
@@ -115,9 +115,9 @@ void printCommandInfo(const char* name, CmdType& cmd) {
     std::cout << "  Description: " << cmd.getDescription() << "\n";
     
     const auto& spec = cmd.getSpec();
-    if (spec.options.size() > 0) {
+    if (spec.numOptions() > 0) {
         std::cout << "  Options:\n";
-        for (const auto& opt : spec.options) {
+        for (const auto& opt : spec.options()) {
             std::cout << "    --" << opt.name << ": " << opt.description << "\n";
         }
     }

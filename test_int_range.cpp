@@ -18,15 +18,10 @@ int main() {
     constexpr IntOption tempOpt{"temperature", "Temperature in Celsius (-273-1000)", -273, 1000};
     constexpr IntOption unrestrictedOpt{"unlimited", "No range limits"};
     
-    constexpr auto configSpec = CommandSpec<4>(
+    constexpr auto configSpec = CommandSpec(
         "config",
         "Configure with range-validated options",
-        makeOptions(
-            AnyOption{portOpt},
-            AnyOption{percentOpt},
-            AnyOption{tempOpt},
-            AnyOption{unrestrictedOpt}
-        )
+        makeOptions(portOpt, percentOpt, tempOpt, unrestrictedOpt)
     );
     
     auto configCmd = makeCommand(configSpec, [](const ParsedArgs& args) {

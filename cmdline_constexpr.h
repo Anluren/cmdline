@@ -199,24 +199,27 @@ struct OptionGroup {
 
 /**
  * Compile-time command specification with option groups
+ * Template parameter is an OptionGroup type
  */
-template<size_t NumOptions = 0>
+template<typename OptGroup>
 struct CommandSpec {
     std::string_view name;
     std::string_view description;
-    std::array<AnyOption, NumOptions> options;
+    OptGroup optionGroup;
     
-    constexpr CommandSpec(std::string_view n, std::string_view d = "")
-        : name(n), description(d), options{} {}
+    constexpr CommandSpec(std::string_view n, std::string_view d, const OptGroup& opts)
+        : name(n), description(d), optionGroup(opts) {}
     
-    constexpr CommandSpec(std::string_view n, std::string_view d,
-                         const std::array<AnyOption, NumOptions>& opts)
-        : name(n), description(d), options(opts) {}
+    // Get number of options
+    constexpr size_t numOptions() const { return optionGroup.size(); }
+    
+    // Access options array
+    constexpr const auto& options() const { return optionGroup.options; }
     
     // Helper to find option index by name at compile time
     constexpr std::optional<size_t> findOption(std::string_view optName) const {
-        for (size_t i = 0; i < NumOptions; ++i) {
-            if (options[i].name == optName) {
+        for (size_t i = 0; i < optionGroup.size(); ++i) {
+            if (optionGroup.options[i].name == optName) {
                 return i;
             }
         }
@@ -225,9 +228,9 @@ struct CommandSpec {
     
     // Get option spec by name
     constexpr const AnyOption* getOptionSpec(std::string_view optName) const {
-        for (size_t i = 0; i < NumOptions; ++i) {
-            if (options[i].name == optName) {
-                return &options[i];
+        for (size_t i = 0; i < optionGroup.size(); ++i) {
+            if (optionGroup.options[i].name == optName) {
+                return &optionGroup.options[i];
             }
         }
         return nullptr;
@@ -323,13 +326,13 @@ struct ParsedArgs {
  * Runtime command (references compile-time spec)
  * HandlerType is typically a lambda or function pointer
  */
-template<size_t NumOptions = 0, typename HandlerType = CommandHandler>
+template<typename OptGroup, typename HandlerType = CommandHandler>
 class Command {
 public:
-    constexpr Command(const CommandSpec<NumOptions>& spec, HandlerType handler)
+    constexpr Command(const CommandSpec<OptGroup>& spec, HandlerType handler)
         : spec_(spec), handler_(handler) {}
     
-    const CommandSpec<NumOptions>& getSpec() const { return spec_; }
+    const CommandSpec<OptGroup>& getSpec() const { return spec_; }
     constexpr std::string_view getName() const { return spec_.name; }
     constexpr std::string_view getDescription() const { return spec_.description; }
     
@@ -425,54 +428,27 @@ public:
     }
     
 private:
-    const CommandSpec<NumOptions>& spec_;
+    const CommandSpec<OptGroup>& spec_;
     HandlerType handler_;
 };
 
 // Helper function to create commands from constexpr specs
 // Deduces HandlerType automatically from the lambda/function passed
-template<size_t N, typename HandlerType>
-auto makeCommand(const CommandSpec<N>& spec, HandlerType handler) {
-    return std::make_shared<Command<N, HandlerType>>(spec, handler);
+template<typename OptGroup, typename HandlerType>
+auto makeCommand(const CommandSpec<OptGroup>& spec, HandlerType handler) {
+    return std::make_shared<Command<OptGroup, HandlerType>>(spec, handler);
 }
 
-// Constexpr helper to create option arrays from typed options
-template<typename... Args>
-constexpr auto makeOptions(Args... args) {
-    return std::array<AnyOption, sizeof...(Args)>{AnyOption(args)...};
-}
-
-// Helper to create option group (no longer needs makeOptions wrapper)
+// Helper to create option group from typed options
 template<typename... Args>
 constexpr auto makeOptionGroup(std::string_view name, std::string_view description, Args... args) {
     return OptionGroup<Args...>{name, description, args...};
 }
 
-// Helper to merge option groups into command options
-template<size_t N1, size_t N2>
-constexpr auto mergeOptions(const std::array<AnyOption, N1>& opts1,
-                            const std::array<AnyOption, N2>& opts2) {
-    std::array<AnyOption, N1 + N2> result{};
-    for (size_t i = 0; i < N1; ++i) {
-        result[i] = opts1[i];
-    }
-    for (size_t i = 0; i < N2; ++i) {
-        result[N1 + i] = opts2[i];
-    }
-    return result;
-}
-
-// Merge an option group with options array
-template<size_t N1, typename... GroupOpts>
-constexpr auto mergeWithGroup(const std::array<AnyOption, N1>& opts,
-                              const OptionGroup<GroupOpts...>& group) {
-    return mergeOptions(opts, group.options);
-}
-
-// Merge multiple option groups
-template<typename... Opts1, typename... Opts2>
-constexpr auto mergeGroups(const OptionGroup<Opts1...>& g1, const OptionGroup<Opts2...>& g2) {
-    return mergeOptions(g1.options, g2.options);
+// Convenience helper to create anonymous option group (for backward compatibility)
+template<typename... Args>
+constexpr auto makeOptions(Args... args) {
+    return OptionGroup<Args...>{"", "", args...};
 }
 
 } // namespace cmdline_ct

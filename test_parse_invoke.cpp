@@ -15,13 +15,10 @@ int main() {
     constexpr IntOption portOpt{"port", "Port number"};
     constexpr IntOption retryOpt{"retry", "Retry count"};
     
-    constexpr auto connectSpec = CommandSpec<2>(
+    constexpr auto connectSpec = CommandSpec(
         "connect",
         "Connect to a server",
-        makeOptions(
-            AnyOption{portOpt},
-            AnyOption{retryOpt}
-        )
+        makeOptions(portOpt, retryOpt)
     );
     
     // Create command with lambda handler

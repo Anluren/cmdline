@@ -56,21 +56,25 @@ int main() {
         std::cout << "  - " << opt.name << ": " << opt.description << "\n";
     }
     
-    // Compose groups together
+    // Compose groups together - now just create a new group with all options
     std::cout << "\n\nComposing groups:\n";
     
-    constexpr auto allNetworkOpts = mergeGroups(networkOpts, authOpts);
-    std::cout << "Network + Auth = " << allNetworkOpts.size() << " options\n";
-    
-    constexpr auto fullSpec = mergeOptions(allNetworkOpts, retryOpts.options);
-    std::cout << "Network + Auth + Retry = " << fullSpec.size() << " options\n";
-    
-    // Create command using composed options
-    constexpr auto connectSpec = CommandSpec<7>(
+    // Create command using all options directly
+    constexpr auto connectSpec = CommandSpec(
         "connect",
         "Connect to server with auth and retry",
-        mergeOptions(allNetworkOpts, retryOpts.options)
+        makeOptions(
+            StringOption{"host", "Server hostname"},
+            IntOption{"port", "Port number"},
+            StringOption{"username", "Username for login"},
+            StringOption{"password", "Password for login"},
+            IntOption{"timeout", "Auth timeout in seconds"},
+            IntOption{"max-retries", "Maximum retry attempts"},
+            IntOption{"delay", "Delay between retries (ms)"}
+        )
     );
+    
+    std::cout << "Full connect spec has " << connectSpec.numOptions() << " options\n";
     
     auto connectCmd = makeCommand(connectSpec, [](const ParsedArgs& args) {
         std::cout << "\n[CONNECT] Executing with:\n";
