@@ -31,6 +31,15 @@ target_link_libraries(example PRIVATE
     cmdline
 )
 
+# Compile-time example (header-only, no library dependency)
+add_executable(example_constexpr
+    example_constexpr.cpp
+)
+
+target_include_directories(example_constexpr PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}
+)
+
 # Install targets
 install(TARGETS cmdline
     LIBRARY DESTINATION lib
