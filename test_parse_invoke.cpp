@@ -58,10 +58,11 @@ int main() {
     std::cout << "  [PARSE] Parsed options:\n";
     for (const auto& [name, val] : parsed.options) {
         std::cout << "    --" << name << " = ";
-        if (val.intValue) {
-            std::cout << *val.intValue << " (0x" << std::hex << *val.intValue << std::dec << ")";
-        } else if (val.stringValue) {
-            std::cout << "\"" << *val.stringValue << "\"";
+        if (std::holds_alternative<int64_t>(val)) {
+            auto intVal = std::get<int64_t>(val);
+            std::cout << intVal << " (0x" << std::hex << intVal << std::dec << ")";
+        } else if (std::holds_alternative<std::string>(val)) {
+            std::cout << "\"" << std::get<std::string>(val) << "\"";
         }
         std::cout << "\n";
     }
@@ -83,8 +84,7 @@ int main() {
     // Modify parsed arguments
     parsed2.positional[0] = "backup.server.com";
     if (auto it = parsed2.options.find("port"); it != parsed2.options.end()) {
-        it->second.intValue = 8443;
-        it->second.stringValue = "8443";
+        it->second = int64_t(8443);
     }
     
     std::cout << "\n  Second invocation (modified):\n";
@@ -103,11 +103,7 @@ int main() {
     } else if (!parsed3.hasOption("port")) {
         std::cout << "  [VALIDATION] WARNING: No port specified, using default\n";
         // Add default port
-        OptionValue defaultPort;
-        defaultPort.name = "port";
-        defaultPort.intValue = 80;
-        defaultPort.stringValue = "80";
-        parsed3.options["port"] = defaultPort;
+        parsed3.options["port"] = int64_t(80);
     }
     
     std::cout << "  [INVOKE] Invoking with validated/modified args:\n";

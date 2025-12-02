@@ -16,12 +16,59 @@
 #include <string>
 #include <memory>
 #include <iostream>
+#include <variant>
 
 namespace cmdline_ct {
 
 // Forward declarations
 struct ParsedArgs;
 using CommandHandler = std::function<bool(const ParsedArgs&)>;
+
+/**
+ * TypedOptionValue template - stores a value with compile-time type information
+ */
+template<typename T>
+struct TypedOptionValue {
+    using value_type = T;
+    
+    T value;
+    bool is_set = false;
+    
+    TypedOptionValue() : value{}, is_set(false) {}
+    explicit TypedOptionValue(const T& val) : value(val), is_set(true) {}
+    explicit TypedOptionValue(T&& val) : value(std::move(val)), is_set(true) {}
+    
+    // Check if value was set
+    explicit operator bool() const { return is_set; }
+    
+    // Access the value
+    T& get() { return value; }
+    const T& get() const { return value; }
+    
+    // Set the value
+    void set(const T& val) {
+        value = val;
+        is_set = true;
+    }
+    
+    void set(T&& val) {
+        value = std::move(val);
+        is_set = true;
+    }
+    
+    // Reset to unset state
+    void reset() {
+        value = T{};
+        is_set = false;
+    }
+    
+    // Dereference operators for convenience
+    T& operator*() { return value; }
+    const T& operator*() const { return value; }
+    
+    T* operator->() { return &value; }
+    const T* operator->() const { return &value; }
+};
 
 /**
  * Base option specification using CRTP for compile-time polymorphism
@@ -279,85 +326,77 @@ private:
 };
 
 /**
- * Parsed option value - holds any option type value
+ * Helper function to parse integer from string (supports decimal, hex, binary)
  */
-struct OptionValue {
-    std::string name;
+inline std::optional<int64_t> parseInt(const std::string& str) {
+    if (str.empty()) return std::nullopt;
     
-    // Single values
-    std::optional<int64_t> intValue;
-    std::optional<std::string> stringValue;
-    
-    // Array values
-    std::optional<std::vector<int64_t>> intArray;
-    std::optional<std::vector<std::string>> stringArray;
-    
-    OptionValue() = default;
-    
-    static std::optional<int64_t> parseInt(const std::string& str) {
-        if (str.empty()) return std::nullopt;
-        
-        try {
-            if (str.size() > 2 && str[0] == '0' && (str[1] == 'x' || str[1] == 'X')) {
-                return std::stoll(str.substr(2), nullptr, 16);
-            }
-            else if (str.size() > 2 && str[0] == '0' && (str[1] == 'b' || str[1] == 'B')) {
-                return std::stoll(str.substr(2), nullptr, 2);
-            }
-            else {
-                return std::stoll(str, nullptr, 10);
-            }
-        } catch (...) {
-            return std::nullopt;
+    try {
+        if (str.size() > 2 && str[0] == '0' && (str[1] == 'x' || str[1] == 'X')) {
+            return std::stoll(str.substr(2), nullptr, 16);
         }
+        else if (str.size() > 2 && str[0] == '0' && (str[1] == 'b' || str[1] == 'B')) {
+            return std::stoll(str.substr(2), nullptr, 2);
+        }
+        else {
+            return std::stoll(str, nullptr, 10);
+        }
+    } catch (...) {
+        return std::nullopt;
     }
-    
-    // Type-safe getters
-    bool hasInt() const { return intValue.has_value(); }
-    bool hasString() const { return stringValue.has_value(); }
-    bool hasIntArray() const { return intArray.has_value(); }
-    bool hasStringArray() const { return stringArray.has_value(); }
-};
+}
+
+/**
+ * Parsed option value - holds any option type using std::variant
+ */
+using ParsedOptionValue = std::variant<
+    std::monostate,
+    int64_t,
+    std::string,
+    std::vector<int64_t>,
+    std::vector<std::string>
+>;
 
 /**
  * Parsed arguments with type-safe accessors
  */
 struct ParsedArgs {
     std::vector<std::string> positional;
-    std::map<std::string, OptionValue> options;
+    std::map<std::string, ParsedOptionValue> options;
     
     bool hasOption(const std::string& name) const {
-        return options.find(name) != options.end();
+        auto it = options.find(name);
+        return it != options.end() && !std::holds_alternative<std::monostate>(it->second);
     }
     
     std::optional<int64_t> getInt(const std::string& name) const {
         auto it = options.find(name);
-        if (it != options.end()) {
-            return it->second.intValue;
+        if (it != options.end() && std::holds_alternative<int64_t>(it->second)) {
+            return std::get<int64_t>(it->second);
         }
         return std::nullopt;
     }
     
     std::optional<std::string> getString(const std::string& name) const {
         auto it = options.find(name);
-        if (it != options.end()) {
-            return it->second.stringValue;
+        if (it != options.end() && std::holds_alternative<std::string>(it->second)) {
+            return std::get<std::string>(it->second);
         }
         return std::nullopt;
     }
     
     std::optional<std::vector<int64_t>> getIntArray(const std::string& name) const {
         auto it = options.find(name);
-        if (it != options.end()) {
-            return it->second.intArray;
+        if (it != options.end() && std::holds_alternative<std::vector<int64_t>>(it->second)) {
+            return std::get<std::vector<int64_t>>(it->second);
         }
         return std::nullopt;
     }
     
     std::optional<std::vector<std::string>> getStringArray(const std::string& name) const {
         auto it = options.find(name);
-        if (it != options.end()) {
-            return it->second.stringArray;
+        if (it != options.end() && std::holds_alternative<std::vector<std::string>>(it->second)) {
+            return std::get<std::vector<std::string>>(it->second);
         }
         return std::nullopt;
     }
@@ -416,8 +455,7 @@ public:
             
             if (isOpt) {
                 // Found a valid option - use visitor to parse it
-                OptionValue val;
-                val.name = optName;
+                ParsedOptionValue val;
                 
                 spec_.optionGroup.visitOption(optName, [&](const auto& opt) {
                     using OptType = std::decay_t<decltype(opt)>;
@@ -427,15 +465,15 @@ public:
                         if (i + 1 < args.size()) {
                             std::string optValue = args[i + 1];
                             ++i;
-                            auto parsedValue = OptionValue::parseInt(optValue);
+                            auto parsedValue = parseInt(optValue);
                             if (parsedValue && opt.isValid(*parsedValue)) {
-                                val.intValue = parsedValue;
+                                val = *parsedValue;
                             }
                         }
                     } else if constexpr (std::is_same_v<OptType, StringOption>) {
                         // Single string
                         if (i + 1 < args.size()) {
-                            val.stringValue = args[i + 1];
+                            val = args[i + 1];
                             ++i;
                         }
                     } else if constexpr (std::is_same_v<OptType, IntArrayOption>) {
@@ -443,13 +481,13 @@ public:
                         std::vector<int64_t> arr;
                         while (i + 1 < args.size() && !isOption(args[i + 1])) {
                             ++i;
-                            if (auto intVal = OptionValue::parseInt(args[i])) {
+                            if (auto intVal = parseInt(args[i])) {
                                 if (opt.isValid(*intVal)) {
                                     arr.push_back(*intVal);
                                 }
                             }
                         }
-                        val.intArray = arr;
+                        val = arr;
                     } else if constexpr (std::is_same_v<OptType, StringArrayOption>) {
                         // Array of strings
                         std::vector<std::string> arr;
@@ -457,11 +495,13 @@ public:
                             ++i;
                             arr.push_back(args[i]);
                         }
-                        val.stringArray = arr;
+                        val = arr;
                     }
                 });
                 
-                parsed.options[optName] = val;
+                if (!std::holds_alternative<std::monostate>(val)) {
+                    parsed.options[optName] = val;
+                }
             } else {
                 // Positional argument
                 parsed.positional.push_back(arg);
