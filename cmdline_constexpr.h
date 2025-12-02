@@ -24,8 +24,9 @@ struct ParsedArgs;
 using CommandHandler = std::function<bool(const ParsedArgs&)>;
 
 /**
- * Base option specification
+ * Base option specification using CRTP for compile-time polymorphism
  */
+template<typename Derived>
 struct OptionSpecBase {
     std::string_view name;
     std::string_view description;
@@ -33,12 +34,21 @@ struct OptionSpecBase {
     
     constexpr OptionSpecBase(std::string_view n, std::string_view d = "", bool req = false)
         : name(n), description(d), required(req) {}
+    
+    // CRTP accessor to derived type
+    constexpr const Derived& derived() const {
+        return static_cast<const Derived&>(*this);
+    }
+    
+    constexpr Derived& derived() {
+        return static_cast<Derived&>(*this);
+    }
 };
 
 /**
  * Integer option specification with optional range validation
  */
-struct IntOption : OptionSpecBase {
+struct IntOption : OptionSpecBase<IntOption> {
     std::optional<int64_t> min_value;
     std::optional<int64_t> max_value;
     
@@ -66,7 +76,7 @@ struct IntOption : OptionSpecBase {
 /**
  * String option specification
  */
-struct StringOption : OptionSpecBase {
+struct StringOption : OptionSpecBase<StringOption> {
     constexpr StringOption(std::string_view n, std::string_view d = "", bool req = false)
         : OptionSpecBase(n, d, req) {}
     
@@ -77,7 +87,7 @@ struct StringOption : OptionSpecBase {
 /**
  * Integer array option specification with optional range validation
  */
-struct IntArrayOption : OptionSpecBase {
+struct IntArrayOption : OptionSpecBase<IntArrayOption> {
     std::optional<int64_t> min_value;
     std::optional<int64_t> max_value;
     
@@ -105,7 +115,7 @@ struct IntArrayOption : OptionSpecBase {
 /**
  * String array option specification
  */
-struct StringArrayOption : OptionSpecBase {
+struct StringArrayOption : OptionSpecBase<StringArrayOption> {
     constexpr StringArrayOption(std::string_view n, std::string_view d = "", bool req = false)
         : OptionSpecBase(n, d, req) {}
     
@@ -151,6 +161,8 @@ struct OptionGroup {
     std::string_view description;
     std::tuple<Opts...> options;
     
+    static constexpr size_t num_options = sizeof...(Opts);
+    
     constexpr OptionGroup(std::string_view n, std::string_view d, Opts... opts)
         : name(n), description(d), options(std::make_tuple(opts...)) {}
     
@@ -169,15 +181,6 @@ private:
     }
 };
 
-// Helper to get tuple size from OptionGroup (must be after OptionGroup definition)
-template<typename T>
-struct option_group_size;
-
-template<typename... Opts>
-struct option_group_size<OptionGroup<Opts...>> {
-    static constexpr size_t value = sizeof...(Opts);
-};
-
 /**
  * Compile-time command specification with option groups
  * Template parameter is an OptionGroup type
@@ -188,7 +191,8 @@ struct CommandSpec {
     std::string_view description;
     OptGroup optionGroup;
     
-    static constexpr size_t NumOptions = option_group_size<OptGroup>::value;
+    // Use the static member from OptionGroup directly
+    static constexpr size_t NumOptions = OptGroup::num_options;
     
     constexpr CommandSpec(std::string_view n, std::string_view d, const OptGroup& opts)
         : name(n), description(d), optionGroup(opts) {}
