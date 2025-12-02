@@ -23,13 +23,15 @@
 
 - **Header-only**: Single header file, no compilation required
 - **C++17 Standard**: Pure C++17, no external dependencies
-- **Type-safe**: Compile-time type checking for options
+- **Type-safe**: Compile-time type checking for options with tuple-based storage
 - **Zero-overhead**: Constexpr specifications compiled away
 - **Flexible Parsing**: Supports both `--option value` and `option value` formats
 - **Range Validation**: Optional min/max validation for integer options
 - **Subcommands**: Hierarchical command structures (like git, docker)
 - **Mode System**: Interactive mode transitions for complex workflows
-- **Modern C++**: Uses std::string_view, std::optional, variadic templates
+- **argc/argv Interface**: Native support for main() style arguments
+- **No Exceptions**: Uses std::from_chars for exception-free parsing
+- **Modern C++**: Uses std::string_view, std::optional, variadic templates, std::tuple
 
 ---
 
@@ -113,52 +115,102 @@ struct AnyOption {
 
 **Purpose:** Allows runtime iteration over heterogeneous option types stored in compile-time tuples.
 
-### OptionValue
+### TypedOptionValue
 
-Holds parsed option values with type information:
+Template-based storage for parsed option values with compile-time type information:
 
 ```cpp
-struct OptionValue {
-    std::string name;
-    std::optional<int64_t> intValue;
-    std::optional<std::string> stringValue;
-    std::vector<int64_t> intArray;
-    std::vector<std::string> stringArray;
+template<typename T>
+struct TypedOptionValue {
+    T value;
+    bool is_set = false;
     
-    static std::optional<int64_t> parseInt(const std::string& str);
+    void set(T v);
+    void reset();
+    
+    // Convenient accessors
+    T& operator*();
+    T* operator->();
+    explicit operator bool() const;
 };
 ```
 
 **Features:**
+- Type-safe value storage with compile-time type
+- `is_set` flag to track if value was provided
+- Convenient operators for easy access
+- Move semantics support
+
+### parseInt Function
+
+**Exception-free integer parsing** using `std::from_chars`:
+
+```cpp
+inline std::optional<int64_t> parseInt(const std::string& str);
+```
+
+**Features:**
 - Supports hex (0x), binary (0b), decimal parsing for integers
-- Type-safe accessors via ParsedArgs
-- Automatic range filtering during parsing
+- No exceptions - returns `std::nullopt` on parse errors
+- Uses `std::from_chars` for efficient, exception-free parsing
+- Validates that entire string was consumed
 
 ### ParsedArgs
 
-Container for parsed command-line arguments:
+Template-based container for parsed command-line arguments with compile-time type safety:
 
 ```cpp
+template<typename OptGroup>
 struct ParsedArgs {
-    std::map<std::string, OptionValue> options;
     std::vector<std::string> positional;
     
-    // Type-safe getters
-    std::optional<int64_t> getInt(std::string_view name) const;
-    std::optional<std::string> getString(std::string_view name) const;
-    std::optional<std::vector<int64_t>> getIntArray(std::string_view name) const;
-    std::optional<std::vector<std::string>> getStringArray(std::string_view name) const;
+    // Tuple of TypedOptionValue matching the OptionGroup
+    using OptionsTuple = std::tuple<TypedOptionValue<T1>, TypedOptionValue<T2>, ...>;
+    OptionsTuple options;
+    
+    // Compile-time accessors by index
+    template<size_t I>
+    auto& get();
+    
+    // Runtime accessors by name
+    bool hasOption(const std::string& name) const;
+    std::optional<int64_t> getInt(const std::string& name) const;
+    std::optional<std::string> getString(const std::string& name) const;
+    std::optional<std::vector<int64_t>> getIntArray(const std::string& name) const;
+    std::optional<std::vector<std::string>> getStringArray(const std::string& name) const;
 };
 ```
 
+**Key Changes:**
+- Options stored in `std::tuple` instead of `std::map` for compile-time type safety
+- Each option's type is known at compile time
+- Compile-time access via `get<I>()` for index-based access
+- Runtime access via `getInt()`, `getString()`, etc. for name-based access
+
 **Usage:**
 ```cpp
-auto handler = [](const ParsedArgs& args) {
+// Runtime access by name
+auto handler = [](const auto& args) {
     if (auto port = args.getInt("port")) {
         std::cout << "Port: " << *port << "\n";
     }
     return true;
 };
+
+// Compile-time access by index
+auto handler = [](const auto& args) {
+    auto& portValue = args.get<0>();  // First option (port)
+    if (portValue.is_set) {
+        std::cout << "Port: " << portValue.value << "\n";
+    }
+    return true;
+};
+
+// Modifying parsed values
+auto parsed = cmd->parse(args);
+parsed.get<0>().value = 8080;  // Set port to 8080
+parsed.get<0>().is_set = true;
+cmd->invoke(parsed);
 ```
 
 ---
@@ -363,9 +415,14 @@ auto addCmd = makeCommand(addSpec, [](const ParsedArgs& args) {
 
 **Methods:**
 ```cpp
+// Vector<string> interface
 bool execute(const std::vector<std::string>& args);  // Parse + invoke
-ParsedArgs parse(const std::vector<std::string>& args);  // Just parse
-bool invoke(const ParsedArgs& parsed);  // Just invoke handler
+ParsedArgs<OptGroup> parse(const std::vector<std::string>& args);  // Just parse
+bool invoke(const ParsedArgs<OptGroup>& parsed);  // Just invoke handler
+
+// argc/argv interface (for main() style arguments)
+bool execute(int argc, char* argv[]);  // Parse + invoke from argv
+ParsedArgs<OptGroup> parse(int argc, char* argv[]);  // Parse from argv
 ```
 
 ---
@@ -588,15 +645,45 @@ The library supports both formats interchangeably:
 4. **Store**: Place in `ParsedArgs::options` map
 5. **Positional**: Arguments that don't match options go to `ParsedArgs::positional`
 
+### argc/argv Interface
+
+Native support for `main(int argc, char* argv[])` style arguments:
+
+```cpp
+int main(int argc, char* argv[]) {
+    auto cmd = makeCommand(spec, handler);
+    
+    // Skip program name (argv[0]) and pass remaining arguments
+    return cmd->execute(argc - 1, argv + 1) ? 0 : 1;
+}
+```
+
+**Available for:**
+- `Command::execute(int argc, char* argv[])`
+- `Command::parse(int argc, char* argv[])`
+- `SubcommandDispatcher::execute(int argc, char* argv[])`
+- `ModeManager::execute(int argc, char* argv[])`
+
+**Benefits:**
+- No manual conversion to `vector<string>` needed
+- Natural interface for command-line tools
+- Internally converts to vector with proper lifetime management
+
 ### Integer Parsing
 
-Supports multiple formats:
+Exception-free integer parsing using `std::from_chars`:
 
 ```cpp
 "42"      -> 42
 "0x2A"    -> 42  (hex)
 "0b101010" -> 42  (binary)
+"invalid" -> std::nullopt  (no exception thrown)
 ```
+
+**Implementation:**
+- Uses `std::from_chars` for parsing
+- Returns `std::nullopt` on parse errors (no exceptions)
+- Validates that entire string was consumed
 
 ### Array Parsing
 
@@ -629,7 +716,7 @@ static_assert(!opt.isValid(80), "80 is invalid");
 
 ## Examples
 
-### Example 1: Simple Server Command
+### Example 1: Simple Server Command with argc/argv
 
 ```cpp
 #include "cmdline_constexpr.h"
@@ -655,7 +742,7 @@ int main(int argc, char* argv[]) {
     };
     
     // Create command with handler
-    auto cmd = makeCommand(spec, [](const ParsedArgs& args) {
+    auto cmd = makeCommand(spec, [](const auto& args) {
         int64_t port = args.getInt("port").value_or(8080);
         std::string host = args.getString("host").value_or("localhost");
         int64_t workers = args.getInt("workers").value_or(4);
@@ -668,9 +755,9 @@ int main(int argc, char* argv[]) {
         return true;
     });
     
-    // Parse and execute
-    std::vector<std::string> args(argv + 1, argv + argc);
-    return cmd->execute(args) ? 0 : 1;
+    // Parse and execute using argc/argv interface
+    // Skip program name (argv[0])
+    return cmd->execute(argc - 1, argv + 1) ? 0 : 1;
 }
 ```
 
@@ -678,6 +765,7 @@ int main(int argc, char* argv[]) {
 ```bash
 ./server --port 8080 --host 0.0.0.0 --workers 8
 ./server port 8080 host 0.0.0.0 workers 8  # Also valid
+./server --port 0x1F90 --host localhost    # Hex values supported
 ```
 
 ### Example 2: Git-like Subcommands
@@ -698,7 +786,7 @@ int main(int argc, char* argv[]) {
     );
     constexpr auto addSpec = CommandSpec<decltype(addOpts)>{"add", "Add files", addOpts};
     
-    auto addCmd = makeCommand(addSpec, [](const ParsedArgs& args) {
+    auto addCmd = makeCommand(addSpec, [](const auto& args) {
         std::cout << "Adding files:\n";
         if (auto files = args.getStringArray("files")) {
             for (const auto& f : *files) {
@@ -716,7 +804,7 @@ int main(int argc, char* argv[]) {
     );
     constexpr auto commitSpec = CommandSpec<decltype(commitOpts)>{"commit", "Commit", commitOpts};
     
-    auto commitCmd = makeCommand(commitSpec, [](const ParsedArgs& args) {
+    auto commitCmd = makeCommand(commitSpec, [](const auto& args) {
         if (auto msg = args.getString("message")) {
             std::cout << "Committing: " << *msg << "\n";
         }
@@ -1156,6 +1244,7 @@ void threadFunc() {
 
 1. **Option lookup is linear**: Searching tuple of options is O(n)
    - Negligible for typical command-line tools (<20 options)
+   - Compile-time access via `get<I>()` is O(1)
    
 2. **No automatic help generation**: Must implement custom help
    - Built-in help for subcommands, but not for individual options
@@ -1171,6 +1260,10 @@ void threadFunc() {
    
 6. **Array parsing stops at next option**: Can't mix array values with options
    - `files a.cpp --verbose b.cpp` won't work as expected
+
+7. **Tuple storage requires compile-time types**: Option groups must be known at compile time
+   - Can't dynamically add/remove options at runtime
+   - Use runtime name-based accessors for dynamic cases
 
 ---
 
