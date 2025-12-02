@@ -364,47 +364,171 @@ using ParsedOptionValue = std::variant<
 /**
  * Parsed arguments with type-safe accessors
  * Template parameter OptGroup provides compile-time option group information
+ * Stores typed option values in a tuple matching the OptionGroup structure
  */
 template<typename OptGroup>
 struct ParsedArgs {
     std::vector<std::string> positional;
-    std::map<std::string, ParsedOptionValue> options;
     
+    // Extract value types from option specs and wrap in TypedOptionValue
+    template<typename... Opts>
+    struct MakeValueTuple;
+    
+    template<typename... Opts>
+    struct MakeValueTuple<std::tuple<Opts...>> {
+        using type = std::tuple<TypedOptionValue<typename Opts::value_type>...>;
+    };
+    
+    using OptionsTuple = typename MakeValueTuple<decltype(OptGroup::options)>::type;
+    OptionsTuple options;
+    
+    // Store a pointer to the option group for runtime name lookups
+    const OptGroup* optionGroup = nullptr;
+    
+    // Helper to find option index by name at compile time
+    template<size_t I = 0>
+    static constexpr std::optional<size_t> findOptionIndex(const OptGroup& optGroup, std::string_view name) {
+        if constexpr (I < std::tuple_size_v<decltype(OptGroup::options)>) {
+            if (std::get<I>(optGroup.options).name == name) {
+                return I;
+            }
+            return findOptionIndex<I + 1>(optGroup, name);
+        }
+        return std::nullopt;
+    }
+    
+    // Get typed option value by index at compile time
+    template<size_t I>
+    auto& get() {
+        return std::get<I>(options);
+    }
+    
+    template<size_t I>
+    const auto& get() const {
+        return std::get<I>(options);
+    }
+    
+    // Runtime accessors for backward compatibility
     bool hasOption(const std::string& name) const {
-        auto it = options.find(name);
-        return it != options.end() && !std::holds_alternative<std::monostate>(it->second);
+        if (!optionGroup) return false;
+        bool found = false;
+        hasOptionImpl(name, found, std::make_index_sequence<std::tuple_size_v<OptionsTuple>>{});
+        return found;
     }
     
     std::optional<int64_t> getInt(const std::string& name) const {
-        auto it = options.find(name);
-        if (it != options.end() && std::holds_alternative<int64_t>(it->second)) {
-            return std::get<int64_t>(it->second);
-        }
-        return std::nullopt;
+        if (!optionGroup) return std::nullopt;
+        std::optional<int64_t> result;
+        getIntImpl(name, result, std::make_index_sequence<std::tuple_size_v<OptionsTuple>>{});
+        return result;
     }
     
     std::optional<std::string> getString(const std::string& name) const {
-        auto it = options.find(name);
-        if (it != options.end() && std::holds_alternative<std::string>(it->second)) {
-            return std::get<std::string>(it->second);
-        }
-        return std::nullopt;
+        if (!optionGroup) return std::nullopt;
+        std::optional<std::string> result;
+        getStringImpl(name, result, std::make_index_sequence<std::tuple_size_v<OptionsTuple>>{});
+        return result;
     }
     
     std::optional<std::vector<int64_t>> getIntArray(const std::string& name) const {
-        auto it = options.find(name);
-        if (it != options.end() && std::holds_alternative<std::vector<int64_t>>(it->second)) {
-            return std::get<std::vector<int64_t>>(it->second);
-        }
-        return std::nullopt;
+        if (!optionGroup) return std::nullopt;
+        std::optional<std::vector<int64_t>> result;
+        getIntArrayImpl(name, result, std::make_index_sequence<std::tuple_size_v<OptionsTuple>>{});
+        return result;
     }
     
     std::optional<std::vector<std::string>> getStringArray(const std::string& name) const {
-        auto it = options.find(name);
-        if (it != options.end() && std::holds_alternative<std::vector<std::string>>(it->second)) {
-            return std::get<std::vector<std::string>>(it->second);
+        if (!optionGroup) return std::nullopt;
+        std::optional<std::vector<std::string>> result;
+        getStringArrayImpl(name, result, std::make_index_sequence<std::tuple_size_v<OptionsTuple>>{});
+        return result;
+    }
+
+private:
+    template<size_t... Is>
+    void hasOptionImpl(const std::string& name, bool& found, std::index_sequence<Is...>) const {
+        (void)((checkOptionName<Is>(name) && (found = std::get<Is>(options).is_set, true)) || ...);
+    }
+    
+    template<size_t I>
+    bool checkOptionName(const std::string& name) const {
+        return std::get<I>(optionGroup->options).name == name;
+    }
+    
+    template<size_t... Is>
+    void getIntImpl(const std::string& name, std::optional<int64_t>& result, std::index_sequence<Is...>) const {
+        (void)((tryGetInt<Is>(name, result)) || ...);
+    }
+    
+    template<size_t I>
+    bool tryGetInt(const std::string& name, std::optional<int64_t>& result) const {
+        if (std::get<I>(optionGroup->options).name != name) return false;
+        using ValueType = typename std::tuple_element_t<I, OptionsTuple>::value_type;
+        if constexpr (std::is_same_v<ValueType, int64_t>) {
+            const auto& opt = std::get<I>(options);
+            if (opt.is_set) {
+                result = opt.value;
+                return true;
+            }
         }
-        return std::nullopt;
+        return false;
+    }
+    
+    template<size_t... Is>
+    void getStringImpl(const std::string& name, std::optional<std::string>& result, std::index_sequence<Is...>) const {
+        (void)((tryGetString<Is>(name, result)) || ...);
+    }
+    
+    template<size_t I>
+    bool tryGetString(const std::string& name, std::optional<std::string>& result) const {
+        if (std::get<I>(optionGroup->options).name != name) return false;
+        using ValueType = typename std::tuple_element_t<I, OptionsTuple>::value_type;
+        if constexpr (std::is_same_v<ValueType, std::string>) {
+            const auto& opt = std::get<I>(options);
+            if (opt.is_set) {
+                result = opt.value;
+                return true;
+            }
+        }
+        return false;
+    }
+    
+    template<size_t... Is>
+    void getIntArrayImpl(const std::string& name, std::optional<std::vector<int64_t>>& result, std::index_sequence<Is...>) const {
+        (void)((tryGetIntArray<Is>(name, result)) || ...);
+    }
+    
+    template<size_t I>
+    bool tryGetIntArray(const std::string& name, std::optional<std::vector<int64_t>>& result) const {
+        if (std::get<I>(optionGroup->options).name != name) return false;
+        using ValueType = typename std::tuple_element_t<I, OptionsTuple>::value_type;
+        if constexpr (std::is_same_v<ValueType, std::vector<int64_t>>) {
+            const auto& opt = std::get<I>(options);
+            if (opt.is_set) {
+                result = opt.value;
+                return true;
+            }
+        }
+        return false;
+    }
+    
+    template<size_t... Is>
+    void getStringArrayImpl(const std::string& name, std::optional<std::vector<std::string>>& result, std::index_sequence<Is...>) const {
+        (void)((tryGetStringArray<Is>(name, result)) || ...);
+    }
+    
+    template<size_t I>
+    bool tryGetStringArray(const std::string& name, std::optional<std::vector<std::string>>& result) const {
+        if (std::get<I>(optionGroup->options).name != name) return false;
+        using ValueType = typename std::tuple_element_t<I, OptionsTuple>::value_type;
+        if constexpr (std::is_same_v<ValueType, std::vector<std::string>>) {
+            const auto& opt = std::get<I>(options);
+            if (opt.is_set) {
+                result = opt.value;
+                return true;
+            }
+        }
+        return false;
     }
 };
 
@@ -439,6 +563,7 @@ public:
     // Parse arguments into ParsedArgs structure with type awareness
     ParsedArgs<OptGroup> parse(const std::vector<std::string>& args) const {
         ParsedArgs<OptGroup> parsed;
+        parsed.optionGroup = &m_spec.optionGroup; // Set the option group pointer for runtime name lookups
         
         for (size_t i = 0; i < args.size(); ++i) {
             const auto& arg = args[i];
@@ -460,54 +585,8 @@ public:
             }
             
             if (isOpt) {
-                // Found a valid option - use visitor to parse it
-                ParsedOptionValue val;
-                
-                m_spec.optionGroup.visitOption(optName, [&](const auto& opt) {
-                    using OptType = std::decay_t<decltype(opt)>;
-                    
-                    if constexpr (std::is_same_v<OptType, IntOption>) {
-                        // Single integer
-                        if (i + 1 < args.size()) {
-                            std::string optValue = args[i + 1];
-                            ++i;
-                            auto parsedValue = parseInt(optValue);
-                            if (parsedValue && opt.isValid(*parsedValue)) {
-                                val = *parsedValue;
-                            }
-                        }
-                    } else if constexpr (std::is_same_v<OptType, StringOption>) {
-                        // Single string
-                        if (i + 1 < args.size()) {
-                            val = args[i + 1];
-                            ++i;
-                        }
-                    } else if constexpr (std::is_same_v<OptType, IntArrayOption>) {
-                        // Array of integers
-                        std::vector<int64_t> arr;
-                        while (i + 1 < args.size() && !isOption(args[i + 1])) {
-                            ++i;
-                            if (auto intVal = parseInt(args[i])) {
-                                if (opt.isValid(*intVal)) {
-                                    arr.push_back(*intVal);
-                                }
-                            }
-                        }
-                        val = arr;
-                    } else if constexpr (std::is_same_v<OptType, StringArrayOption>) {
-                        // Array of strings
-                        std::vector<std::string> arr;
-                        while (i + 1 < args.size() && !isOption(args[i + 1])) {
-                            ++i;
-                            arr.push_back(args[i]);
-                        }
-                        val = arr;
-                    }
-                });
-                
-                if (!std::holds_alternative<std::monostate>(val)) {
-                    parsed.options[optName] = val;
-                }
+                // Found a valid option - parse it and store in the tuple
+                parseOptionIntoTuple(parsed, optName, args, i);
             } else {
                 // Positional argument
                 parsed.positional.push_back(arg);
@@ -516,6 +595,78 @@ public:
         
         return parsed;
     }
+    
+private:
+    // Helper to parse an option and store it in the correct tuple position
+    void parseOptionIntoTuple(ParsedArgs<OptGroup>& parsed, const std::string& optName, 
+                             const std::vector<std::string>& args, size_t& i) const {
+        // Use index_sequence to iterate through all options
+        parseOptionIntoTupleImpl(parsed, optName, args, i, 
+                                std::make_index_sequence<OptGroup::num_options>{});
+    }
+    
+    template<size_t... Is>
+    void parseOptionIntoTupleImpl(ParsedArgs<OptGroup>& parsed, const std::string& optName,
+                                 const std::vector<std::string>& args, size_t& i,
+                                 std::index_sequence<Is...>) const {
+        // Try each option index until we find the matching one
+        (void)((tryParseOption<Is>(parsed, optName, args, i)) || ...);
+    }
+    
+    template<size_t I>
+    bool tryParseOption(ParsedArgs<OptGroup>& parsed, const std::string& optName,
+                       const std::vector<std::string>& args, size_t& i) const {
+        const auto& opt = std::get<I>(m_spec.optionGroup.options);
+        if (opt.name != optName) {
+            return false; // Not this option, keep looking
+        }
+        
+        // Found the matching option - parse it based on its type
+        using OptType = std::decay_t<decltype(opt)>;
+        auto& typedValue = std::get<I>(parsed.options);
+        
+        if constexpr (std::is_same_v<OptType, IntOption>) {
+            // Single integer
+            if (i + 1 < args.size()) {
+                std::string optValue = args[i + 1];
+                ++i;
+                auto parsedValue = parseInt(optValue);
+                if (parsedValue && opt.isValid(*parsedValue)) {
+                    typedValue.set(*parsedValue);
+                }
+            }
+        } else if constexpr (std::is_same_v<OptType, StringOption>) {
+            // Single string
+            if (i + 1 < args.size()) {
+                typedValue.set(args[i + 1]);
+                ++i;
+            }
+        } else if constexpr (std::is_same_v<OptType, IntArrayOption>) {
+            // Array of integers
+            std::vector<int64_t> arr;
+            while (i + 1 < args.size() && !isOption(args[i + 1])) {
+                ++i;
+                if (auto intVal = parseInt(args[i])) {
+                    if (opt.isValid(*intVal)) {
+                        arr.push_back(*intVal);
+                    }
+                }
+            }
+            typedValue.set(std::move(arr));
+        } else if constexpr (std::is_same_v<OptType, StringArrayOption>) {
+            // Array of strings
+            std::vector<std::string> arr;
+            while (i + 1 < args.size() && !isOption(args[i + 1])) {
+                ++i;
+                arr.push_back(args[i]);
+            }
+            typedValue.set(std::move(arr));
+        }
+        
+        return true; // Found and processed
+    }
+
+public:
     
     // Invoke handler with parsed arguments
     bool invoke(const ParsedArgs<OptGroup>& parsed) const {

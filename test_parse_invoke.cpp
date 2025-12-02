@@ -56,15 +56,15 @@ int main() {
     std::cout << "\n";
     
     std::cout << "  [PARSE] Parsed options:\n";
-    for (const auto& [name, val] : parsed.options) {
-        std::cout << "    --" << name << " = ";
-        if (std::holds_alternative<int64_t>(val)) {
-            auto intVal = std::get<int64_t>(val);
-            std::cout << intVal << " (0x" << std::hex << intVal << std::dec << ")";
-        } else if (std::holds_alternative<std::string>(val)) {
-            std::cout << "\"" << std::get<std::string>(val) << "\"";
+    if (parsed.hasOption("port")) {
+        if (auto val = parsed.getInt("port")) {
+            std::cout << "    --port = " << *val << " (0x" << std::hex << *val << std::dec << ")\n";
         }
-        std::cout << "\n";
+    }
+    if (parsed.hasOption("timeout")) {
+        if (auto val = parsed.getInt("timeout")) {
+            std::cout << "    --timeout = " << *val << "\n";
+        }
     }
     
     // Step 2: Invoke handler with parsed data
@@ -83,9 +83,9 @@ int main() {
     
     // Modify parsed arguments
     parsed2.positional[0] = "backup.server.com";
-    if (auto it = parsed2.options.find("port"); it != parsed2.options.end()) {
-        it->second = int64_t(8443);
-    }
+    // Note: With tuple-based storage, we modify by index (port is option 0)
+    parsed2.get<0>().value = 8443;
+    parsed2.get<0>().is_set = true;
     
     std::cout << "\n  Second invocation (modified):\n";
     connectCmd->invoke(parsed2);
@@ -102,8 +102,9 @@ int main() {
         std::cout << "  [VALIDATION] ERROR: No server specified\n";
     } else if (!parsed3.hasOption("port")) {
         std::cout << "  [VALIDATION] WARNING: No port specified, using default\n";
-        // Add default port
-        parsed3.options["port"] = int64_t(80);
+        // Add default port (port is option 0)
+        parsed3.get<0>().value = 80;
+        parsed3.get<0>().is_set = true;
     }
     
     std::cout << "  [INVOKE] Invoking with validated/modified args:\n";
