@@ -22,7 +22,7 @@ int main() {
     );
     
     // Create command with lambda handler
-    auto connectCmd = makeCommand(connectSpec, [](const ParsedArgs& args) {
+    auto connectCmd = makeCommand(connectSpec, [](const auto& args) {
         std::cout << "  [HANDLER] Connecting to: " << args.positional[0] << "\n";
         if (auto port = args.getInt("port")) {
             std::cout << "  [HANDLER] Port: " << *port << "\n";

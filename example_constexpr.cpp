@@ -51,7 +51,8 @@ namespace Commands {
 }
 
 // Handler functions
-bool showHandler(const ParsedArgs& args) {
+template<typename OptGroup>
+bool showHandler(const ParsedArgs<OptGroup>& args) {
     std::cout << "Show command - Positional args: ";
     for (const auto& arg : args.positional) {
         std::cout << arg << " ";
@@ -69,7 +70,8 @@ bool showHandler(const ParsedArgs& args) {
     return true;
 }
 
-bool connectHandler(const ParsedArgs& args) {
+template<typename OptGroup>
+bool connectHandler(const ParsedArgs<OptGroup>& args) {
     if (!args.positional.empty()) {
         std::cout << "Connecting to: " << args.positional[0] << "\n";
         
@@ -84,7 +86,8 @@ bool connectHandler(const ParsedArgs& args) {
     return true;
 }
 
-bool setHandler(const ParsedArgs& args) {
+template<typename OptGroup>
+bool setHandler(const ParsedArgs<OptGroup>& args) {
     if (args.positional.size() >= 2) {
         std::cout << "Setting " << args.positional[0] << " = " << args.positional[1] << "\n";
         
@@ -95,12 +98,14 @@ bool setHandler(const ParsedArgs& args) {
     return true;
 }
 
-bool statusHandler(const ParsedArgs& args) {
+template<typename OptGroup>
+bool statusHandler(const ParsedArgs<OptGroup>& args) {
     std::cout << "Status: OK\n";
     return true;
 }
 
-bool listHandler(const ParsedArgs& args) {
+template<typename OptGroup>
+bool listHandler(const ParsedArgs<OptGroup>& args) {
     std::cout << "Items:\n";
     std::cout << "  - Item 1\n";
     std::cout << "  - Item 2\n";
@@ -129,7 +134,7 @@ int main() {
     
     // Create commands from compile-time specs with inline lambdas
     // Each command gets its own type based on the lambda!
-    auto showCmd = makeCommand(Commands::showSpec, [](const ParsedArgs& args) {
+    auto showCmd = makeCommand(Commands::showSpec, [](const auto& args) {
         std::cout << "Show command - Positional args: ";
         for (const auto& arg : args.positional) {
             std::cout << arg << " ";
@@ -147,7 +152,7 @@ int main() {
         return true;
     });
     
-    auto connectCmd = makeCommand(Commands::connectSpec, [](const ParsedArgs& args) {
+    auto connectCmd = makeCommand(Commands::connectSpec, [](const auto& args) {
         if (!args.positional.empty()) {
             std::cout << "Connecting to: " << args.positional[0] << "\n";
             
@@ -162,7 +167,7 @@ int main() {
         return true;
     });
     
-    auto setCmd = makeCommand(Commands::setSpec, [](const ParsedArgs& args) {
+    auto setCmd = makeCommand(Commands::setSpec, [](const auto& args) {
         if (args.positional.size() >= 2) {
             std::cout << "Setting " << args.positional[0] << " = " << args.positional[1] << "\n";
             
@@ -173,12 +178,12 @@ int main() {
         return true;
     });
     
-    auto statusCmd = makeCommand(Commands::statusSpec, [](const ParsedArgs& args) {
+    auto statusCmd = makeCommand(Commands::statusSpec, [](const auto& args) {
         std::cout << "Status: OK\n";
         return true;
     });
     
-    auto listCmd = makeCommand(Commands::listSpec, [](const ParsedArgs& args) {
+    auto listCmd = makeCommand(Commands::listSpec, [](const auto& args) {
         std::cout << "Items:\n";
         std::cout << "  - Item 1\n";
         std::cout << "  - Item 2\n";

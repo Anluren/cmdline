@@ -23,7 +23,7 @@ void testModeTransitions() {
     );
     constexpr auto addSpec = CommandSpec<decltype(addOptions)>{"add", "Add files", addOptions};
     
-    auto addCmd = makeCommand(addSpec, [](const ParsedArgs& args) {
+    auto addCmd = makeCommand(addSpec, [](const auto& args) {
         std::cout << "[git add] Adding files to staging area\n";
         if (auto files = args.getStringArray("files")) {
             for (const auto& f : *files) {
@@ -42,7 +42,7 @@ void testModeTransitions() {
     );
     constexpr auto commitSpec = CommandSpec<decltype(commitOptions)>{"commit", "Commit changes", commitOptions};
     
-    auto commitCmd = makeCommand(commitSpec, [](const ParsedArgs& args) {
+    auto commitCmd = makeCommand(commitSpec, [](const auto& args) {
         std::cout << "[git commit] Committing changes\n";
         if (auto msg = args.getString("message")) {
             std::cout << "  Message: \"" << *msg << "\"\n";
@@ -63,7 +63,7 @@ void testModeTransitions() {
     );
     constexpr auto runSpec = CommandSpec<decltype(runOptions)>{"run", "Run container", runOptions};
     
-    auto runCmd = makeCommand(runSpec, [](const ParsedArgs& args) {
+    auto runCmd = makeCommand(runSpec, [](const auto& args) {
         std::cout << "[docker run] Starting container\n";
         if (auto img = args.getString("image")) {
             std::cout << "  Image: " << *img << "\n";

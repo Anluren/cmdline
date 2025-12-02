@@ -22,7 +22,7 @@ int main() {
         makeOptions(portsOpt, scoresOpt, unboundedOpt)
     );
     
-    auto batchCmd = makeCommand(batchSpec, [](const ParsedArgs& args) {
+    auto batchCmd = makeCommand(batchSpec, [](const auto& args) {
         if (auto ports = args.getIntArray("ports")) {
             std::cout << "  Ports: [";
             for (size_t i = 0; i < ports->size(); ++i) {

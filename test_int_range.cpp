@@ -24,7 +24,7 @@ int main() {
         makeOptions(portOpt, percentOpt, tempOpt, unrestrictedOpt)
     );
     
-    auto configCmd = makeCommand(configSpec, [](const ParsedArgs& args) {
+    auto configCmd = makeCommand(configSpec, [](const auto& args) {
         std::cout << "Configuration applied:\n";
         
         if (auto port = args.getInt("port")) {

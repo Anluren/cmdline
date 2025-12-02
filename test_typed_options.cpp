@@ -46,7 +46,7 @@ int main() {
         )
     );
     
-    auto connectCmd = makeCommand(connectSpec, [](const ParsedArgs& args) {
+    auto connectCmd = makeCommand(connectSpec, [](const auto& args) {
         if (auto host = args.getString("host")) {
             std::cout << "  Connecting to: " << *host << "\n";
         }
@@ -74,7 +74,7 @@ int main() {
         )
     );
     
-    auto configCmd = makeCommand(configSpec, [](const ParsedArgs& args) {
+    auto configCmd = makeCommand(configSpec, [](const auto& args) {
         if (auto ports = args.getIntArray("ports")) {
             std::cout << "  Ports: ";
             for (auto p : *ports) {
@@ -103,7 +103,7 @@ int main() {
         )
     );
     
-    auto deployCmd = makeCommand(deploySpec, [](const ParsedArgs& args) {
+    auto deployCmd = makeCommand(deploySpec, [](const auto& args) {
         if (auto servers = args.getStringArray("servers")) {
             std::cout << "  Deploying to servers:\n";
             for (const auto& s : *servers) {
@@ -133,7 +133,7 @@ int main() {
         )
     );
     
-    auto advConnectCmd = makeCommand(advancedConnectSpec, [](const ParsedArgs& args) {
+    auto advConnectCmd = makeCommand(advancedConnectSpec, [](const auto& args) {
         std::cout << "  Network options:\n";
         if (auto host = args.getString("host")) {
             std::cout << "    Host: " << *host << "\n";
@@ -168,7 +168,7 @@ int main() {
         )
     );
     
-    auto copyCmd = makeCommand(copySpec, [](const ParsedArgs& args) {
+    auto copyCmd = makeCommand(copySpec, [](const auto& args) {
         std::cout << "  Source: " << (args.positional.size() > 0 ? args.positional[0] : "none") << "\n";
         std::cout << "  Dest: " << (args.positional.size() > 1 ? args.positional[1] : "none") << "\n";
         

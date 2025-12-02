@@ -23,7 +23,7 @@ int main() {
         makeOptions(portOpt, hostOpt, portsOpt, tagsOpt)
     );
     
-    auto connectCmd = makeCommand(connectSpec, [](const ParsedArgs& args) {
+    auto connectCmd = makeCommand(connectSpec, [](const auto& args) {
         std::cout << "  Command executed:\n";
         
         if (!args.positional.empty()) {

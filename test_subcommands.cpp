@@ -23,7 +23,7 @@ int main() {
         )
     );
     
-    auto addCmd = makeCommand(addSpec, [](const ParsedArgs& args) {
+    auto addCmd = makeCommand(addSpec, [](const auto& args) {
         std::cout << "[git add] Adding files to staging area\n";
         if (auto files = args.getStringArray("files")) {
             for (const auto& file : *files) {
@@ -46,7 +46,7 @@ int main() {
         )
     );
     
-    auto commitCmd = makeCommand(commitSpec, [](const ParsedArgs& args) {
+    auto commitCmd = makeCommand(commitSpec, [](const auto& args) {
         std::cout << "[git commit] Committing changes\n";
         if (auto msg = args.getString("message")) {
             std::cout << "  Message: \"" << *msg << "\"\n";
@@ -68,7 +68,7 @@ int main() {
         )
     );
     
-    auto pushCmd = makeCommand(pushSpec, [](const ParsedArgs& args) {
+    auto pushCmd = makeCommand(pushSpec, [](const auto& args) {
         std::cout << "[git push] Pushing to remote\n";
         if (auto remote = args.getString("remote")) {
             std::cout << "  Remote: " << *remote << "\n";
@@ -89,7 +89,7 @@ int main() {
         makeOptions()
     );
     
-    auto statusCmd = makeCommand(statusSpec, [](const ParsedArgs& args) {
+    auto statusCmd = makeCommand(statusSpec, [](const auto& args) {
         std::cout << "[git status] Showing status\n";
         std::cout << "  On branch main\n";
         std::cout << "  Your branch is up to date with 'origin/main'\n";
@@ -174,7 +174,7 @@ int main() {
         )
     );
     
-    auto runCmd = makeCommand(runSpec, [](const ParsedArgs& args) {
+    auto runCmd = makeCommand(runSpec, [](const auto& args) {
         std::cout << "[docker run] Starting container\n";
         if (auto image = args.getString("image")) {
             std::cout << "  Image: " << *image << "\n";
@@ -196,7 +196,7 @@ int main() {
         )
     );
     
-    auto psCmd = makeCommand(psSpec, [](const ParsedArgs& args) {
+    auto psCmd = makeCommand(psSpec, [](const auto& args) {
         std::cout << "[docker ps] Listing containers\n";
         if (auto all = args.getInt("all")) {
             std::cout << "  Show all: " << (*all ? "yes" : "no") << "\n";

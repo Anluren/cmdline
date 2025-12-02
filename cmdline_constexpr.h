@@ -21,8 +21,11 @@
 namespace cmdline_ct {
 
 // Forward declarations
+template<typename OptGroup>
 struct ParsedArgs;
-using CommandHandler = std::function<bool(const ParsedArgs&)>;
+
+template<typename OptGroup>
+using CommandHandler = std::function<bool(const ParsedArgs<OptGroup>&)>;
 
 /**
  * TypedOptionValue template - stores a value with compile-time type information
@@ -233,6 +236,7 @@ private:
     }
 };
 
+
 /**
  * Compile-time command specification with option groups
  * Template parameter is an OptionGroup type
@@ -359,7 +363,9 @@ using ParsedOptionValue = std::variant<
 
 /**
  * Parsed arguments with type-safe accessors
+ * Template parameter OptGroup provides compile-time option group information
  */
+template<typename OptGroup>
 struct ParsedArgs {
     std::vector<std::string> positional;
     std::map<std::string, ParsedOptionValue> options;
@@ -406,7 +412,7 @@ struct ParsedArgs {
  * Runtime command (references compile-time spec)
  * HandlerType is typically a lambda or function pointer
  */
-template<typename OptGroup, typename HandlerType = CommandHandler>
+template<typename OptGroup, typename HandlerType = CommandHandler<OptGroup>>
 class Command {
 public:
     constexpr Command(const CommandSpec<OptGroup>& spec, HandlerType handler)
@@ -426,13 +432,13 @@ public:
     
     // Execute: parse arguments then invoke handler
     bool execute(const std::vector<std::string>& args) const {
-        ParsedArgs parsed = parse(args);
+        ParsedArgs<OptGroup> parsed = parse(args);
         return invoke(parsed);
     }
     
     // Parse arguments into ParsedArgs structure with type awareness
-    ParsedArgs parse(const std::vector<std::string>& args) const {
-        ParsedArgs parsed;
+    ParsedArgs<OptGroup> parse(const std::vector<std::string>& args) const {
+        ParsedArgs<OptGroup> parsed;
         
         for (size_t i = 0; i < args.size(); ++i) {
             const auto& arg = args[i];
@@ -512,7 +518,7 @@ public:
     }
     
     // Invoke handler with parsed arguments
-    bool invoke(const ParsedArgs& parsed) const {
+    bool invoke(const ParsedArgs<OptGroup>& parsed) const {
         return handler_(parsed);
     }
     

@@ -9,12 +9,12 @@ int main() {
     constexpr auto spec2 = CommandSpec("test2", "Test 2", makeOptions());
     
     // Each lambda creates a unique type
-    auto cmd1 = makeCommand(spec1, [](const ParsedArgs&) { 
+    auto cmd1 = makeCommand(spec1, [](const auto&) { 
         std::cout << "Handler 1\n"; 
         return true; 
     });
     
-    auto cmd2 = makeCommand(spec2, [](const ParsedArgs&) { 
+    auto cmd2 = makeCommand(spec2, [](const auto&) { 
         std::cout << "Handler 2\n"; 
         return true; 
     });

@@ -77,7 +77,7 @@ int main() {
     
     std::cout << "Full connect spec has " << connectSpec.numOptions() << " options\n";
     
-    auto connectCmd = makeCommand(connectSpec, [](const ParsedArgs& args) {
+    auto connectCmd = makeCommand(connectSpec, [](const auto& args) {
         std::cout << "\n[CONNECT] Executing with:\n";
         if (auto host = args.getString("host")) {
             std::cout << "  Host: " << *host << "\n";
