@@ -17,6 +17,7 @@
 #include <memory>
 #include <iostream>
 #include <variant>
+#include <charconv>
 
 namespace cmdline_ct {
 
@@ -335,19 +336,28 @@ private:
 inline std::optional<int64_t> parseInt(const std::string& str) {
     if (str.empty()) return std::nullopt;
     
-    try {
-        if (str.size() > 2 && str[0] == '0' && (str[1] == 'x' || str[1] == 'X')) {
-            return std::stoll(str.substr(2), nullptr, 16);
-        }
-        else if (str.size() > 2 && str[0] == '0' && (str[1] == 'b' || str[1] == 'B')) {
-            return std::stoll(str.substr(2), nullptr, 2);
-        }
-        else {
-            return std::stoll(str, nullptr, 10);
-        }
-    } catch (...) {
-        return std::nullopt;
+    int64_t result = 0;
+    const char* start = str.data();
+    const char* end = str.data() + str.size();
+    std::from_chars_result parse_result;
+    
+    if (str.size() > 2 && str[0] == '0' && (str[1] == 'x' || str[1] == 'X')) {
+        // Hexadecimal
+        parse_result = std::from_chars(start + 2, end, result, 16);
     }
+    else if (str.size() > 2 && str[0] == '0' && (str[1] == 'b' || str[1] == 'B')) {
+        // Binary
+        parse_result = std::from_chars(start + 2, end, result, 2);
+    }
+    else {
+        // Decimal
+        parse_result = std::from_chars(start, end, result, 10);
+    }
+    
+    if (parse_result.ec == std::errc{} && parse_result.ptr == end) {
+        return result;
+    }
+    return std::nullopt;
 }
 
 /**
