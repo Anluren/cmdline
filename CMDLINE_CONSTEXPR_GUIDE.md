@@ -93,28 +93,6 @@ mgr->addMode("git", gitDispatcher);     // Safe sharing
 
 ## Core Components
 
-### AnyOption
-
-Type-erased wrapper for runtime polymorphism over option types:
-
-```cpp
-struct AnyOption {
-    std::string_view name;
-    std::string_view description;
-    bool required;
-    bool is_int;      // true for IntOption/IntArrayOption
-    bool is_array;    // true for array options
-    
-    // Range validation (for integer types)
-    std::optional<int64_t> min_value;
-    std::optional<int64_t> max_value;
-    
-    bool isValid(int64_t value) const;  // Runtime validation
-};
-```
-
-**Purpose:** Allows runtime iteration over heterogeneous option types stored in compile-time tuples.
-
 ### TypedOptionValue
 
 Template-based storage for parsed option values with compile-time type information:
