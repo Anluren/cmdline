@@ -43,6 +43,11 @@ struct OptionSpecBase {
     constexpr Derived& derived() {
         return static_cast<Derived&>(*this);
     }
+    
+    // Create default instance of value_type (defined in derived)
+    auto createDefaultValue() const {
+        return typename Derived::value_type{};
+    }
 };
 
 /**
@@ -53,14 +58,14 @@ struct IntOption : OptionSpecBase<IntOption> {
     std::optional<int64_t> max_value;
     
     constexpr IntOption(std::string_view n, std::string_view d = "", bool req = false)
-        : OptionSpecBase(n, d, req), min_value(std::nullopt), max_value(std::nullopt) {}
+        : OptionSpecBase<IntOption>(n, d, req), min_value(std::nullopt), max_value(std::nullopt) {}
     
     constexpr IntOption(std::string_view n, std::string_view d, bool req,
                        int64_t min_val, int64_t max_val)
-        : OptionSpecBase(n, d, req), min_value(min_val), max_value(max_val) {}
+        : OptionSpecBase<IntOption>(n, d, req), min_value(min_val), max_value(max_val) {}
     
     constexpr IntOption(std::string_view n, std::string_view d, int64_t min_val, int64_t max_val)
-        : OptionSpecBase(n, d, false), min_value(min_val), max_value(max_val) {}
+        : OptionSpecBase<IntOption>(n, d, false), min_value(min_val), max_value(max_val) {}
     
     // Validate value is within range
     constexpr bool isValid(int64_t value) const {
@@ -78,7 +83,7 @@ struct IntOption : OptionSpecBase<IntOption> {
  */
 struct StringOption : OptionSpecBase<StringOption> {
     constexpr StringOption(std::string_view n, std::string_view d = "", bool req = false)
-        : OptionSpecBase(n, d, req) {}
+        : OptionSpecBase<StringOption>(n, d, req) {}
     
     using value_type = std::string;
     static constexpr bool is_array = false;
@@ -92,14 +97,14 @@ struct IntArrayOption : OptionSpecBase<IntArrayOption> {
     std::optional<int64_t> max_value;
     
     constexpr IntArrayOption(std::string_view n, std::string_view d = "", bool req = false)
-        : OptionSpecBase(n, d, req), min_value(std::nullopt), max_value(std::nullopt) {}
+        : OptionSpecBase<IntArrayOption>(n, d, req), min_value(std::nullopt), max_value(std::nullopt) {}
     
     constexpr IntArrayOption(std::string_view n, std::string_view d, bool req,
                             int64_t min_val, int64_t max_val)
-        : OptionSpecBase(n, d, req), min_value(min_val), max_value(max_val) {}
+        : OptionSpecBase<IntArrayOption>(n, d, req), min_value(min_val), max_value(max_val) {}
     
     constexpr IntArrayOption(std::string_view n, std::string_view d, int64_t min_val, int64_t max_val)
-        : OptionSpecBase(n, d, false), min_value(min_val), max_value(max_val) {}
+        : OptionSpecBase<IntArrayOption>(n, d, false), min_value(min_val), max_value(max_val) {}
     
     // Validate value is within range
     constexpr bool isValid(int64_t value) const {
@@ -117,7 +122,7 @@ struct IntArrayOption : OptionSpecBase<IntArrayOption> {
  */
 struct StringArrayOption : OptionSpecBase<StringArrayOption> {
     constexpr StringArrayOption(std::string_view n, std::string_view d = "", bool req = false)
-        : OptionSpecBase(n, d, req) {}
+        : OptionSpecBase<StringArrayOption>(n, d, req) {}
     
     using value_type = std::vector<std::string>;
     static constexpr bool is_array = true;
@@ -240,7 +245,7 @@ private:
     constexpr std::optional<size_t> findOptionImpl(std::string_view optName, 
                                                     std::index_sequence<Is...>) const {
         std::optional<size_t> result;
-        ((std::get<Is>(optionGroup.options).name == optName ? (result = Is, true) : false) || ...);
+        (void)((std::get<Is>(optionGroup.options).name == optName ? (result = Is, true) : false) || ...);
         return result;
     }
     

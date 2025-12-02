@@ -124,6 +124,14 @@ target_include_directories(test_mode_manager PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
+add_executable(test_default_values
+    test_default_values.cpp
+)
+
+target_include_directories(test_default_values PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}
+)
+
 # Install targets
 install(TARGETS cmdline
     LIBRARY DESTINATION lib
