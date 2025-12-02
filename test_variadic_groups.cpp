@@ -25,9 +25,10 @@ int main() {
     
     std::cout << "Network group '" << networkOpts.name << "' has " 
               << networkOpts.size() << " options:\n";
-    for (const auto& opt : networkOpts.options) {
-        std::cout << "  - " << opt.name << ": " << opt.description << "\n";
-    }
+    // Use visitor pattern to iterate over options
+    std::apply([](const auto&... opts) {
+        ((std::cout << "  - " << opts.name << ": " << opts.description << "\n"), ...);
+    }, networkOpts.options);
     
     // Group 2: Authentication (3 options)
     constexpr auto authOpts = makeOptionGroup(
@@ -39,9 +40,9 @@ int main() {
     
     std::cout << "\nAuth group '" << authOpts.name << "' has " 
               << authOpts.size() << " options:\n";
-    for (const auto& opt : authOpts.options) {
-        std::cout << "  - " << opt.name << ": " << opt.description << "\n";
-    }
+    std::apply([](const auto&... opts) {
+        ((std::cout << "  - " << opts.name << ": " << opts.description << "\n"), ...);
+    }, authOpts.options);
     
     // Group 3: Retry policy (2 options)
     constexpr auto retryOpts = makeOptionGroup(
@@ -52,9 +53,9 @@ int main() {
     
     std::cout << "\nRetry group '" << retryOpts.name << "' has " 
               << retryOpts.size() << " options:\n";
-    for (const auto& opt : retryOpts.options) {
-        std::cout << "  - " << opt.name << ": " << opt.description << "\n";
-    }
+    std::apply([](const auto&... opts) {
+        ((std::cout << "  - " << opts.name << ": " << opts.description << "\n"), ...);
+    }, retryOpts.options);
     
     // Compose groups together - now just create a new group with all options
     std::cout << "\n\nComposing groups:\n";

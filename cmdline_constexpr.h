@@ -142,60 +142,40 @@ template<>
 struct is_array_option<StringArrayOption> : std::true_type {};
 
 /**
- * Type-erased option specification for storage
- */
-struct AnyOption {
-    std::string_view name;
-    std::string_view description;
-    bool required;
-    bool is_int;
-    bool is_array;
-    std::optional<int64_t> min_value;
-    std::optional<int64_t> max_value;
-    
-    constexpr AnyOption() 
-        : name(""), description(""), required(false), is_int(false), is_array(false),
-          min_value(std::nullopt), max_value(std::nullopt) {}
-    
-    template<typename OptType>
-    constexpr AnyOption(const OptType& opt)
-        : name(opt.name), description(opt.description), required(opt.required),
-          is_int(is_int_option<OptType>::value), is_array(is_array_option<OptType>::value),
-          min_value(std::nullopt), max_value(std::nullopt) {}
-    
-    // Specialized constructor for IntOption to capture range
-    constexpr AnyOption(const IntOption& opt)
-        : name(opt.name), description(opt.description), required(opt.required),
-          is_int(true), is_array(false),
-          min_value(opt.min_value), max_value(opt.max_value) {}
-    
-    // Specialized constructor for IntArrayOption to capture range
-    constexpr AnyOption(const IntArrayOption& opt)
-        : name(opt.name), description(opt.description), required(opt.required),
-          is_int(true), is_array(true),
-          min_value(opt.min_value), max_value(opt.max_value) {}
-    
-    // Validate integer value against range
-    constexpr bool isValid(int64_t value) const {
-        if (min_value && value < *min_value) return false;
-        if (max_value && value > *max_value) return false;
-        return true;
-    }
-};
-
-/**
  * Option group for composing related options (variadic template)
+ * Stores typed options in a tuple
  */
-template<typename... Options>
+template<typename... Opts>
 struct OptionGroup {
     std::string_view name;
     std::string_view description;
-    std::array<AnyOption, sizeof...(Options)> options;
+    std::tuple<Opts...> options;
     
-    constexpr OptionGroup(std::string_view n, std::string_view d, Options... opts)
-        : name(n), description(d), options{AnyOption(opts)...} {}
+    constexpr OptionGroup(std::string_view n, std::string_view d, Opts... opts)
+        : name(n), description(d), options(std::make_tuple(opts...)) {}
     
-    constexpr size_t size() const { return sizeof...(Options); }
+    constexpr size_t size() const { return sizeof...(Opts); }
+    
+    // Find option by name using fold expression
+    template<typename Visitor>
+    constexpr void visitOption(std::string_view optName, Visitor&& visitor) const {
+        visitOptionImpl(optName, std::forward<Visitor>(visitor), std::index_sequence_for<Opts...>{});
+    }
+    
+private:
+    template<typename Visitor, size_t... Is>
+    constexpr void visitOptionImpl(std::string_view optName, Visitor&& visitor, std::index_sequence<Is...>) const {
+        (void)((std::get<Is>(options).name == optName && (visitor(std::get<Is>(options)), true)) || ...);
+    }
+};
+
+// Helper to get tuple size from OptionGroup (must be after OptionGroup definition)
+template<typename T>
+struct option_group_size;
+
+template<typename... Opts>
+struct option_group_size<OptionGroup<Opts...>> {
+    static constexpr size_t value = sizeof...(Opts);
 };
 
 /**
@@ -208,33 +188,84 @@ struct CommandSpec {
     std::string_view description;
     OptGroup optionGroup;
     
+    static constexpr size_t NumOptions = option_group_size<OptGroup>::value;
+    
     constexpr CommandSpec(std::string_view n, std::string_view d, const OptGroup& opts)
         : name(n), description(d), optionGroup(opts) {}
     
     // Get number of options
     constexpr size_t numOptions() const { return optionGroup.size(); }
     
-    // Access options array
-    constexpr const auto& options() const { return optionGroup.options; }
-    
-    // Helper to find option index by name at compile time
-    constexpr std::optional<size_t> findOption(std::string_view optName) const {
-        for (size_t i = 0; i < optionGroup.size(); ++i) {
-            if (optionGroup.options[i].name == optName) {
-                return i;
-            }
-        }
-        return std::nullopt;
+    // Check if option exists by name
+    constexpr bool hasOption(std::string_view optName) const {
+        bool found = false;
+        optionGroup.visitOption(optName, [&found](const auto&) { found = true; });
+        return found;
     }
     
-    // Get option spec by name
-    constexpr const AnyOption* getOptionSpec(std::string_view optName) const {
-        for (size_t i = 0; i < optionGroup.size(); ++i) {
-            if (optionGroup.options[i].name == optName) {
-                return &optionGroup.options[i];
-            }
+    // Find option index by name (for compile-time checking)
+    constexpr auto findOption(std::string_view optName) const {
+        return findOptionImpl(optName, std::make_index_sequence<NumOptions>{});
+    }
+    
+    // Get all options as a vector (for runtime iteration)
+    auto getAllOptions() const {
+        std::vector<OptionInfo> result;
+        getAllOptionsImpl(result, std::make_index_sequence<NumOptions>{});
+        return result;
+    }
+    
+    // Alias for backward compatibility
+    auto options() const {
+        return getAllOptions();
+    }
+    
+private:
+    // Helper struct to hold option information for runtime iteration
+    struct OptionInfo {
+        std::string_view name;
+        std::string_view description;
+        bool required;
+        bool is_int;
+        bool is_array;
+        std::optional<int64_t> min_value;
+        std::optional<int64_t> max_value;
+    };
+    
+    template<size_t... Is>
+    constexpr std::optional<size_t> findOptionImpl(std::string_view optName, 
+                                                    std::index_sequence<Is...>) const {
+        std::optional<size_t> result;
+        ((std::get<Is>(optionGroup.options).name == optName ? (result = Is, true) : false) || ...);
+        return result;
+    }
+    
+    template<size_t... Is>
+    void getAllOptionsImpl(std::vector<OptionInfo>& result, std::index_sequence<Is...>) const {
+        (addOptionInfo<Is>(result), ...);
+    }
+    
+    template<size_t I>
+    void addOptionInfo(std::vector<OptionInfo>& result) const {
+        const auto& opt = std::get<I>(optionGroup.options);
+        OptionInfo info;
+        info.name = opt.name;
+        info.description = opt.description;
+        info.required = opt.required;
+        
+        using OptType = std::decay_t<decltype(opt)>;
+        info.is_int = std::is_same_v<OptType, IntOption> || std::is_same_v<OptType, IntArrayOption>;
+        info.is_array = std::is_same_v<OptType, IntArrayOption> || std::is_same_v<OptType, StringArrayOption>;
+        
+        if constexpr (std::is_same_v<OptType, IntOption> || std::is_same_v<OptType, IntArrayOption>) {
+            info.min_value = opt.min_value;
+            info.max_value = opt.max_value;
+        } else {
+            info.min_value = std::nullopt;
+            info.max_value = std::nullopt;
         }
-        return nullptr;
+        
+        result.push_back(info);
     }
 };
 
@@ -340,9 +371,9 @@ public:
     // Helper to check if a string is an option (either '--name' or a known option name)
     bool isOption(const std::string& arg) const {
         if (arg.size() > 2 && arg[0] == '-' && arg[1] == '-') {
-            return spec_.getOptionSpec(arg.substr(2)) != nullptr;
+            return spec_.hasOption(arg.substr(2));
         }
-        return spec_.getOptionSpec(arg) != nullptr;
+        return spec_.hasOption(arg);
     }
     
     // Execute: parse arguments then invoke handler
@@ -360,72 +391,66 @@ public:
             
             // Check if it's an option (starts with -- or matches option name directly)
             std::string optName;
-            const AnyOption* optSpec = nullptr;
+            bool isOpt = false;
             
             if (arg.size() > 2 && arg[0] == '-' && arg[1] == '-') {
                 // Option with '--' prefix
                 optName = arg.substr(2);
-                optSpec = spec_.getOptionSpec(optName);
+                isOpt = spec_.hasOption(optName);
             } else {
                 // Try matching without prefix
-                optSpec = spec_.getOptionSpec(arg);
-                if (optSpec) {
+                if (spec_.hasOption(arg)) {
                     optName = arg;
+                    isOpt = true;
                 }
             }
             
-            if (optSpec) {
-                // Found a valid option
-                
+            if (isOpt) {
+                // Found a valid option - use visitor to parse it
                 OptionValue val;
                 val.name = optName;
                 
-                // Parse based on type flags
-                if (optSpec->is_int && !optSpec->is_array) {
-                    // Single integer
-                    if (i + 1 < args.size()) {
-                        std::string optValue = args[i + 1];
-                        ++i;
-                        auto parsedValue = OptionValue::parseInt(optValue);
-                        if (parsedValue) {
-                            // Validate range if specified
-                            if (optSpec->isValid(*parsedValue)) {
+                spec_.optionGroup.visitOption(optName, [&](const auto& opt) {
+                    using OptType = std::decay_t<decltype(opt)>;
+                    
+                    if constexpr (std::is_same_v<OptType, IntOption>) {
+                        // Single integer
+                        if (i + 1 < args.size()) {
+                            std::string optValue = args[i + 1];
+                            ++i;
+                            auto parsedValue = OptionValue::parseInt(optValue);
+                            if (parsedValue && opt.isValid(*parsedValue)) {
                                 val.intValue = parsedValue;
-                            } else {
-                                // Value out of range - could add error reporting here
-                                // For now, skip this option
                             }
                         }
-                    }
-                } else if (!optSpec->is_int && !optSpec->is_array) {
-                    // Single string
-                    if (i + 1 < args.size()) {
-                        val.stringValue = args[i + 1];
-                        ++i;
-                    }
-                } else if (optSpec->is_int && optSpec->is_array) {
-                    // Array of integers - collect until next option or end
-                    std::vector<int64_t> arr;
-                    while (i + 1 < args.size() && !isOption(args[i + 1])) {
-                        ++i;
-                        if (auto intVal = OptionValue::parseInt(args[i])) {
-                            // Validate range if specified
-                            if (optSpec->isValid(*intVal)) {
-                                arr.push_back(*intVal);
-                            }
-                            // Skip values that are out of range
+                    } else if constexpr (std::is_same_v<OptType, StringOption>) {
+                        // Single string
+                        if (i + 1 < args.size()) {
+                            val.stringValue = args[i + 1];
+                            ++i;
                         }
+                    } else if constexpr (std::is_same_v<OptType, IntArrayOption>) {
+                        // Array of integers
+                        std::vector<int64_t> arr;
+                        while (i + 1 < args.size() && !isOption(args[i + 1])) {
+                            ++i;
+                            if (auto intVal = OptionValue::parseInt(args[i])) {
+                                if (opt.isValid(*intVal)) {
+                                    arr.push_back(*intVal);
+                                }
+                            }
+                        }
+                        val.intArray = arr;
+                    } else if constexpr (std::is_same_v<OptType, StringArrayOption>) {
+                        // Array of strings
+                        std::vector<std::string> arr;
+                        while (i + 1 < args.size() && !isOption(args[i + 1])) {
+                            ++i;
+                            arr.push_back(args[i]);
+                        }
+                        val.stringArray = arr;
                     }
-                    val.intArray = arr;
-                } else if (!optSpec->is_int && optSpec->is_array) {
-                    // Array of strings - collect until next option or end
-                    std::vector<std::string> arr;
-                    while (i + 1 < args.size() && !isOption(args[i + 1])) {
-                        ++i;
-                        arr.push_back(args[i]);
-                    }
-                    val.stringArray = arr;
-                }
+                });
                 
                 parsed.options[optName] = val;
             } else {
