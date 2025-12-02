@@ -269,6 +269,17 @@ struct CommandSpec {
         return findOptionImpl(optName, std::make_index_sequence<NumOptions>{});
     }
     
+    // Helper struct to hold option information for runtime iteration
+    struct OptionInfo {
+        std::string_view name;
+        std::string_view description;
+        bool required;
+        bool is_int;
+        bool is_array;
+        std::optional<int64_t> min_value;
+        std::optional<int64_t> max_value;
+    };
+    
     // Get all options as a vector (for runtime iteration)
     auto getAllOptions() const {
         std::vector<OptionInfo> result;
@@ -282,16 +293,6 @@ struct CommandSpec {
     }
     
 private:
-    // Helper struct to hold option information for runtime iteration
-    struct OptionInfo {
-        std::string_view name;
-        std::string_view description;
-        bool required;
-        bool is_int;
-        bool is_array;
-        std::optional<int64_t> min_value;
-        std::optional<int64_t> max_value;
-    };
     
     template<size_t... Is>
     constexpr std::optional<size_t> findOptionImpl(std::string_view optName, 
@@ -556,6 +557,46 @@ public:
     constexpr std::string_view getName() const { return m_spec.name; }
     constexpr std::string_view getDescription() const { return m_spec.description; }
     
+    // Show hierarchical view of command with all options
+    void showHierarchy(const std::string& indent = "", bool showOptions = true) const {
+        std::cout << indent << m_spec.name << ": " << m_spec.description << "\n";
+        
+        if (showOptions) {
+            auto opts = m_spec.getAllOptions();
+            if (!opts.empty()) {
+                std::cout << indent << "  Options:\n";
+                for (const auto& opt : opts) {
+                    std::cout << indent << "    --" << opt.name << ": " << opt.description;
+                    
+                    // Show type information
+                    if (opt.is_array) {
+                        std::cout << " [array]";
+                    } else if (opt.is_int) {
+                        std::cout << " [int]";
+                    } else {
+                        std::cout << " [string]";
+                    }
+                    
+                    // Show range if applicable
+                    if (opt.min_value || opt.max_value) {
+                        std::cout << " (";
+                        if (opt.min_value) std::cout << "min=" << *opt.min_value;
+                        if (opt.min_value && opt.max_value) std::cout << ", ";
+                        if (opt.max_value) std::cout << "max=" << *opt.max_value;
+                        std::cout << ")";
+                    }
+                    
+                    // Show required flag
+                    if (opt.required) {
+                        std::cout << " [required]";
+                    }
+                    
+                    std::cout << "\n";
+                }
+            }
+        }
+    }
+    
     // Helper to check if a string is an option (either '--name' or a known option name)
     bool isOption(const std::string& arg) const {
         if (arg.size() > 2 && arg[0] == '-' && arg[1] == '-') {
@@ -818,6 +859,19 @@ public:
     
     const SubcommandMap& getSubcommands() const { return m_subcommands; }
     
+    // Show hierarchical view of all subcommands with their options
+    void showHierarchy(const std::string& indent = "", bool showOptions = true) const {
+        std::cout << indent << m_name << ": " << m_description << "\n";
+        std::cout << indent << "  Subcommands:\n";
+        
+        for (const auto& [name, cmdPtr] : m_subcommands) {
+            std::cout << indent << "    " << name << "\n";
+        }
+        
+        std::cout << "\n";
+        std::cout << indent << "  Use '" << m_name << " help <subcommand>' for details on each subcommand.\n";
+    }
+    
 private:
     std::string m_name;
     std::string m_description;
@@ -945,6 +999,23 @@ public:
             result.push_back(name);
         }
         return result;
+    }
+    
+    // Show hierarchical view of all modes
+    void showHierarchy(bool showOptions = true) const {
+        std::cout << "Mode Manager Hierarchy\n";
+        std::cout << "======================\n\n";
+        std::cout << "Current mode: " << m_currentMode << "\n\n";
+        std::cout << "Available modes:\n";
+        for (const auto& [name, _] : m_modes) {
+            std::cout << "  - " << name;
+            if (name == m_currentMode) {
+                std::cout << " (current)";
+            }
+            std::cout << "\n";
+        }
+        std::cout << "\nUse 'mode <name>' to switch modes\n";
+        std::cout << "Use 'exit' or 'quit' to exit\n";
     }
     
 private:
