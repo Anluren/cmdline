@@ -570,6 +570,16 @@ public:
         return invoke(parsed);
     }
     
+    // Execute with argc/argv style arguments (common in main function)
+    bool execute(int argc, char* argv[]) const {
+        std::vector<std::string> args;
+        args.reserve(argc);
+        for (int i = 0; i < argc; ++i) {
+            args.emplace_back(argv[i]);
+        }
+        return execute(args);
+    }
+    
     // Parse arguments into ParsedArgs structure with type awareness
     ParsedArgs<OptGroup> parse(const std::vector<std::string>& args) const {
         ParsedArgs<OptGroup> parsed;
@@ -606,6 +616,16 @@ public:
         return parsed;
     }
     
+    // Parse with argc/argv style arguments
+    ParsedArgs<OptGroup> parse(int argc, char* argv[]) const {
+        std::vector<std::string> args;
+        args.reserve(argc);
+        for (int i = 0; i < argc; ++i) {
+            args.emplace_back(argv[i]);
+        }
+        return parse(args);
+    }
+
 private:
     // Helper to parse an option and store it in the correct tuple position
     void parseOptionIntoTuple(ParsedArgs<OptGroup>& parsed, const std::string& optName, 
@@ -760,6 +780,16 @@ public:
         return false;
     }
     
+    // Execute with argc/argv style arguments
+    bool execute(int argc, char* argv[]) {
+        std::vector<std::string> args;
+        args.reserve(argc);
+        for (int i = 0; i < argc; ++i) {
+            args.emplace_back(argv[i]);
+        }
+        return execute(args);
+    }
+    
     // Show help for all subcommands
     void showHelp() const {
         std::cout << m_name << ": " << m_description << "\n\n";
@@ -878,6 +908,16 @@ public:
         
         std::cerr << "No handler for mode: " << m_currentMode << "\n";
         return "";
+    }
+    
+    // Execute with argc/argv style arguments
+    std::string execute(int argc, char* argv[]) {
+        std::vector<std::string> args;
+        args.reserve(argc);
+        for (int i = 0; i < argc; ++i) {
+            args.emplace_back(argv[i]);
+        }
+        return execute(args);
     }
     
     // Get current mode name
