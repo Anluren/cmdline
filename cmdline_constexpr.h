@@ -416,18 +416,18 @@ template<typename OptGroup, typename HandlerType = CommandHandler<OptGroup>>
 class Command {
 public:
     constexpr Command(const CommandSpec<OptGroup>& spec, HandlerType handler)
-        : spec_(spec), handler_(handler) {}
+        : m_spec(spec), m_handler(handler) {}
     
-    const CommandSpec<OptGroup>& getSpec() const { return spec_; }
-    constexpr std::string_view getName() const { return spec_.name; }
-    constexpr std::string_view getDescription() const { return spec_.description; }
+    const CommandSpec<OptGroup>& getSpec() const { return m_spec; }
+    constexpr std::string_view getName() const { return m_spec.name; }
+    constexpr std::string_view getDescription() const { return m_spec.description; }
     
     // Helper to check if a string is an option (either '--name' or a known option name)
     bool isOption(const std::string& arg) const {
         if (arg.size() > 2 && arg[0] == '-' && arg[1] == '-') {
-            return spec_.hasOption(arg.substr(2));
+            return m_spec.hasOption(arg.substr(2));
         }
-        return spec_.hasOption(arg);
+        return m_spec.hasOption(arg);
     }
     
     // Execute: parse arguments then invoke handler
@@ -450,10 +450,10 @@ public:
             if (arg.size() > 2 && arg[0] == '-' && arg[1] == '-') {
                 // Option with '--' prefix
                 optName = arg.substr(2);
-                isOpt = spec_.hasOption(optName);
+                isOpt = m_spec.hasOption(optName);
             } else {
                 // Try matching without prefix
-                if (spec_.hasOption(arg)) {
+                if (m_spec.hasOption(arg)) {
                     optName = arg;
                     isOpt = true;
                 }
@@ -463,7 +463,7 @@ public:
                 // Found a valid option - use visitor to parse it
                 ParsedOptionValue val;
                 
-                spec_.optionGroup.visitOption(optName, [&](const auto& opt) {
+                m_spec.optionGroup.visitOption(optName, [&](const auto& opt) {
                     using OptType = std::decay_t<decltype(opt)>;
                     
                     if constexpr (std::is_same_v<OptType, IntOption>) {
@@ -519,12 +519,12 @@ public:
     
     // Invoke handler with parsed arguments
     bool invoke(const ParsedArgs<OptGroup>& parsed) const {
-        return handler_(parsed);
+        return m_handler(parsed);
     }
     
 private:
-    const CommandSpec<OptGroup>& spec_;
-    HandlerType handler_;
+    const CommandSpec<OptGroup>& m_spec;
+    HandlerType m_handler;
 };
 
 // Helper function to create commands from constexpr specs
@@ -556,14 +556,14 @@ public:
     using SubcommandHandler = std::function<bool(const std::vector<std::string>&)>;
     
     SubcommandDispatcher(std::string_view name, std::string_view description = "")
-        : name_(name), description_(description) {}
+        : m_name(name), m_description(description) {}
     
     // Add a subcommand
     template<typename OptGroup, typename HandlerType>
     void addSubcommand(std::shared_ptr<Command<OptGroup, HandlerType>> cmd) {
         std::string cmdName(cmd->getName());
-        subcommands_[cmdName] = cmd;
-        handlers_[cmdName] = [cmd](const std::vector<std::string>& args) {
+        m_subcommands[cmdName] = cmd;
+        m_handlers[cmdName] = [cmd](const std::vector<std::string>& args) {
             return cmd->execute(args);
         };
     }
@@ -587,32 +587,32 @@ public:
         }
         
         // Find and execute subcommand
-        auto it = handlers_.find(subcmdName);
-        if (it != handlers_.end()) {
+        auto it = m_handlers.find(subcmdName);;
+        if (it != m_handlers.end()) {
             // Pass remaining args to subcommand
             std::vector<std::string> subcmdArgs(args.begin() + 1, args.end());
             return it->second(subcmdArgs);
         }
         
         std::cerr << "Unknown subcommand: " << subcmdName << "\n";
-        std::cerr << "Run '" << name_ << " help' for usage.\n";
+        std::cerr << "Run '" << m_name << " help' for usage.\n";
         return false;
     }
     
     // Show help for all subcommands
     void showHelp() const {
-        std::cout << name_ << ": " << description_ << "\n\n";
+        std::cout << m_name << ": " << m_description << "\n\n";
         std::cout << "Available subcommands:\n";
-        for (const auto& [name, _] : handlers_) {
+        for (const auto& [name, _] : m_handlers) {
             std::cout << "  " << name << "\n";
         }
-        std::cout << "\nUse '" << name_ << " help <subcommand>' for more information.\n";
+        std::cout << "\nUse '" << m_name << " help <subcommand>' for more information.\n";
     }
     
     // Show help for specific subcommand
     bool showSubcommandHelp(const std::string& subcmdName) const {
-        auto it = handlers_.find(subcmdName);
-        if (it == handlers_.end()) {
+        auto it = m_handlers.find(subcmdName);;
+        if (it == m_handlers.end()) {
             std::cerr << "Unknown subcommand: " << subcmdName << "\n";
             return false;
         }
@@ -622,16 +622,16 @@ public:
         return true;
     }
     
-    std::string_view getName() const { return name_; }
-    std::string_view getDescription() const { return description_; }
+    std::string_view getName() const { return m_name; }
+    std::string_view getDescription() const { return m_description; }
     
-    const SubcommandMap& getSubcommands() const { return subcommands_; }
+    const SubcommandMap& getSubcommands() const { return m_subcommands; }
     
 private:
-    std::string name_;
-    std::string description_;
-    SubcommandMap subcommands_;
-    std::map<std::string, SubcommandHandler> handlers_;
+    std::string m_name;
+    std::string m_description;
+    SubcommandMap m_subcommands;
+    std::map<std::string, SubcommandHandler> m_handlers;
 };
 
 // Helper to create subcommand dispatcher
@@ -647,17 +647,17 @@ class ModeManager {
 public:
     using ModeHandler = std::function<std::string(const std::vector<std::string>&)>;
     
-    ModeManager() : currentMode_("default") {}
+    ModeManager() : m_currentMode("default") {}
     
     // Register a mode with its command handler
     // Handler returns the next mode name (or empty string to stay in current mode)
     void addMode(std::string_view modeName, ModeHandler handler) {
-        modes_[std::string(modeName)] = handler;
+        m_modes[std::string(modeName)] = handler;
     }
     
     // Register a subcommand dispatcher as a mode
     void addMode(std::string_view modeName, std::shared_ptr<SubcommandDispatcher> dispatcher) {
-        modes_[std::string(modeName)] = [dispatcher](const std::vector<std::string>& args) -> std::string {
+        m_modes[std::string(modeName)] = [dispatcher](const std::vector<std::string>& args) -> std::string {
             dispatcher->execute(args);
             return ""; // Stay in current mode
         };
@@ -666,7 +666,7 @@ public:
     // Register a command as a mode
     template<typename OptGroup, typename HandlerType>
     void addMode(std::string_view modeName, std::shared_ptr<Command<OptGroup, HandlerType>> cmd) {
-        modes_[std::string(modeName)] = [cmd](const std::vector<std::string>& args) -> std::string {
+        m_modes[std::string(modeName)] = [cmd](const std::vector<std::string>& args) -> std::string {
             cmd->execute(args);
             return ""; // Stay in current mode
         };
@@ -687,8 +687,8 @@ public:
         if (args[0] == "mode") {
             if (args.size() > 1) {
                 std::string newMode = args[1];
-                if (modes_.find(newMode) != modes_.end()) {
-                    currentMode_ = newMode;
+                if (m_modes.find(newMode) != m_modes.end()) {
+                    m_currentMode = newMode;
                     std::cout << "Switched to mode: " << newMode << "\n";
                     return newMode;
                 } else {
@@ -696,9 +696,9 @@ public:
                     return "";
                 }
             } else {
-                std::cout << "Current mode: " << currentMode_ << "\n";
+                std::cout << "Current mode: " << m_currentMode << "\n";
                 std::cout << "Available modes:\n";
-                for (const auto& [name, _] : modes_) {
+                for (const auto& [name, _] : m_modes) {
                     std::cout << "  " << name << "\n";
                 }
                 return "";
@@ -706,27 +706,27 @@ public:
         }
         
         // Execute in current mode
-        auto it = modes_.find(currentMode_);
-        if (it != modes_.end()) {
+        auto it = m_modes.find(m_currentMode);
+        if (it != m_modes.end()) {
             std::string nextMode = it->second(args);
             if (!nextMode.empty() && nextMode != "exit") {
-                currentMode_ = nextMode;
+                m_currentMode = nextMode;
             }
             return nextMode;
         }
         
-        std::cerr << "No handler for mode: " << currentMode_ << "\n";
+        std::cerr << "No handler for mode: " << m_currentMode << "\n";
         return "";
     }
     
     // Get current mode name
-    std::string_view getCurrentMode() const { return currentMode_; }
+    std::string_view getCurrentMode() const { return m_currentMode; }
     
     // Set current mode
     bool setMode(std::string_view modeName) {
-        auto it = modes_.find(std::string(modeName));
-        if (it != modes_.end()) {
-            currentMode_ = modeName;
+        auto it = m_modes.find(std::string(modeName));
+        if (it != m_modes.end()) {
+            m_currentMode = modeName;
             return true;
         }
         return false;
@@ -734,21 +734,21 @@ public:
     
     // Check if mode exists
     bool hasMode(std::string_view modeName) const {
-        return modes_.find(std::string(modeName)) != modes_.end();
+        return m_modes.find(std::string(modeName)) != m_modes.end();
     }
     
     // Get all mode names
     std::vector<std::string> getModes() const {
         std::vector<std::string> result;
-        for (const auto& [name, _] : modes_) {
+        for (const auto& [name, _] : m_modes) {
             result.push_back(name);
         }
         return result;
     }
     
 private:
-    std::string currentMode_;
-    std::map<std::string, ModeHandler> modes_;
+    std::string m_currentMode;
+    std::map<std::string, ModeHandler> m_modes;
 };
 
 // Helper to create mode manager
