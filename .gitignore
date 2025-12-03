@@ -34,3 +34,4 @@ Makefile.generated
 # Other
 .DS_Store
 .cache/
+compile_commands.json

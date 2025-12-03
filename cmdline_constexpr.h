@@ -18,6 +18,7 @@
 #include <iostream>
 #include <variant>
 #include <charconv>
+#include <sstream>
 
 namespace cmdline_ct {
 
@@ -971,6 +972,25 @@ public:
         for (int i = 0; i < argc; ++i) {
             args.emplace_back(argv[i]);
         }
+        return execute(args);
+    }
+    
+    // Execute a command string in the current mode
+    // Parses the command string and executes it as if it were entered interactively
+    // Example: executeCommand("start --port 8080 --host localhost")
+    std::string executeCommand(std::string_view commandLine) {
+        if (commandLine.empty()) {
+            return "";
+        }
+        
+        // Simple tokenization (split by whitespace)
+        std::vector<std::string> args;
+        std::istringstream iss{std::string(commandLine)};
+        std::string token;
+        while (iss >> token) {
+            args.push_back(token);
+        }
+        
         return execute(args);
     }
     

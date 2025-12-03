@@ -140,6 +140,30 @@ target_include_directories(test_option_value PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
+add_executable(test_hierarchy
+    test_hierarchy.cpp
+)
+
+target_include_directories(test_hierarchy PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}
+)
+
+add_executable(test_hierarchy_multi
+    test_hierarchy_multi.cpp
+)
+
+target_include_directories(test_hierarchy_multi PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}
+)
+
+add_executable(test_hierarchy_hide_options
+    test_hierarchy_hide_options.cpp
+)
+
+target_include_directories(test_hierarchy_hide_options PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}
+)
+
 # Install targets
 install(TARGETS cmdline
     LIBRARY DESTINATION lib
