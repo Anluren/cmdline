@@ -5,6 +5,7 @@ A C++17 library for building interactive command-line interfaces with multi-leve
 ## Features
 
 - **Multi-level Mode Support**: Create hierarchical command modes that users can navigate through
+- **Partial Command Matching**: Type abbreviated commands (e.g., `sta` for `start`) - exact matches take priority, ambiguous matches are reported with suggestions
 - **Auto-completion**: Full tab completion for commands and subcommands (custom implementation)
 - **Command Matching**: Automatically suggests similar commands when users enter partial or incorrect commands
 - **Subcommands**: Support for nested command structures (e.g., `config set`, `config get`)
@@ -162,6 +163,23 @@ config    connect
 [main]> config s<Tab>
 [main]> config set
 ```
+
+### Partial Command Matching
+
+Users can type abbreviated commands as long as they are unambiguous:
+
+```
+[main]> star      # Matches 'start' if it's the only command starting with 'star'
+[main]> sta       # Error if both 'start' and 'status' exist - suggests both
+```
+
+Features:
+- **Exact matches take priority**: If both `st` and `start` exist, `st` executes the `st` command
+- **Unambiguous abbreviations work**: `star` → `start`, `stat` → `status`
+- **Ambiguous matches are reported**: `sta` matching both `start` and `status` shows helpful error
+- **Works for mode switching**: `mode dev` → switches to `development` mode
+
+See [PARTIAL_MATCHING.md](docs/PARTIAL_MATCHING.md) for detailed documentation.
 
 ### Command Matching
 
