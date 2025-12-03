@@ -1,5 +1,5 @@
 # Command History - cmdline Project Development Session
-## December 2, 2025
+## December 2-3, 2025
 
 This document contains all the commands and requests made during the development session for the cmdline C++17 header-only library project.
 
@@ -8,7 +8,7 @@ This document contains all the commands and requests made during the development
 ## Session Overview
 - **Project**: cmdline - C++17 Header-Only Command Line Library
 - **Repository**: github.com/Anluren/cmdline
-- **Date**: December 2, 2025
+- **Date**: December 2-3, 2025
 
 ---
 
@@ -320,6 +320,137 @@ cmdline/
 ├── README.md (updated)
 └── CMakeLists.txt
 ```
+
+---
+
+## Session 2: December 3, 2025 - Type Safety & Error Handling Improvements
+
+### 16. Remove std::function Dependency
+**Command**: "can I avoid using std::function at line 30?"
+
+**What was done**:
+- Created `CommandHandler<OptGroup, Callable>` template wrapper
+- Added `makeCommandHandler` helper for type deduction
+- Removed default `std::function` template parameter from `Command` class
+- Added `static_assert` to validate handler signature at compile time
+- Provides zero-cost abstraction through direct callable storage
+
+**Files modified**:
+- `include/cmdline/details/cmdline_components.h`
+- `include/cmdline/details/cmdline_types.h` (removed std::function alias)
+
+**Benefits**:
+- No type erasure overhead
+- Better inlining opportunities
+- Smaller binary size
+- Compile-time type checking
+
+---
+
+### 17. Fix Handler Usage in Example
+**Command**: "but I do want it to be called" (referring to showHandler function)
+
+**What was done**:
+- Updated `example_constexpr.cpp` to use named handler functions
+- Replaced inline lambdas with calls to `showHandler`, `connectHandler`, etc.
+- Used `decltype(Commands::showSpec.optionGroup)` for template parameter deduction
+
+**Files modified**:
+- `examples/example_constexpr.cpp`
+
+---
+
+### 18. Add Invalid Option Reporting
+**Command**: "in function parse, shouldn't it report invalid option?"
+
+**What was done**:
+- Added error reporting for unrecognized options with `--` prefix
+- Prints "Error: Unknown option '--<name>'" to stderr
+- Invalid options treated as parse errors
+
+**Files modified**:
+- `include/cmdline/details/cmdline_components.h`
+
+---
+
+### 19. Const Correctness for argv
+**Command**: "for this function, shouldn't we make argv const?"
+
+**What was done**:
+- Changed `parse(int argc, char* argv[])` parameter to `const char* argv[]`
+- Improved const correctness
+
+**Files modified**:
+- `include/cmdline/details/cmdline_components.h`
+
+---
+
+### 20. Use string_view for Efficiency
+**Command**: "can you change std::string to std::string_view?"
+
+**What was done**:
+- Changed `optName` from `std::string` to `std::string_view` in parse functions
+- Updated all helper functions: `parseOptionIntoTuple`, `parseOptionIntoTupleImpl`, `tryParseOption`
+- Avoids unnecessary string copies during parsing
+
+**Files modified**:
+- `include/cmdline/details/cmdline_components.h`
+
+**Commits**:
+- "Replace std::function with template wrapper and improve type safety"
+
+---
+
+### 21. Parse Failure Detection
+**Command**: "is there example to report argument parsing failed?" → "1 and in case parse failed, don't execute"
+
+**What was done**:
+- Added `parseSuccess` flag to `ParsedArgs` struct (defaults to `true`)
+- Modified `execute()` to check `parseSuccess` before invoking handler
+- Set `parseSuccess = false` when invalid options are encountered
+- Handler is NOT executed if parsing fails
+
+**Files modified**:
+- `include/cmdline/details/cmdline_types.h`
+- `include/cmdline/details/cmdline_components.h`
+
+**Behavior**:
+- Valid options: handler executes normally, returns handler result
+- Invalid options: error printed, handler NOT executed, returns `false`
+- Mixed valid/invalid: error printed, handler NOT executed, returns `false`
+
+---
+
+### 22. Add Parse Failure Test Case
+**Command**: "add this as test case"
+
+**What was done**:
+- Created `test_parse_fail.cpp` demonstrating parse failure behavior
+- Tests three scenarios: valid option, invalid option, mixed valid/invalid
+- Verifies handler execution is prevented on parse errors
+- Added test target to CMakeLists.txt
+
+**Files created**:
+- `tests/src/test_parse_fail.cpp`
+
+**Files modified**:
+- `tests/CMakeLists.txt`
+
+---
+
+### 23. Add Test Script
+**Command**: "is there a bash script to run this program?"
+
+**What was done**:
+- Created `test_parse_fail.sh` bash script to run the test
+- Script includes expected behavior documentation
+- Made executable with proper permissions
+
+**Files created**:
+- `tests/scripts/test_parse_fail.sh`
+
+**Commits**:
+- "Add parse failure detection and test case"
 
 ---
 
