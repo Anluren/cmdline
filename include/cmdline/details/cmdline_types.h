@@ -394,6 +394,9 @@ struct ParsedArgs {
     // Store a pointer to the option group for runtime name lookups
     const OptGroup* optionGroup = nullptr;
     
+    // Track whether parsing succeeded (no invalid options encountered)
+    bool parseSuccess = true;
+    
     // Helper to find option index by name at compile time
     template<size_t I = 0>
     static constexpr std::optional<size_t> findOptionIndex(const OptGroup& optGroup, std::string_view name) {

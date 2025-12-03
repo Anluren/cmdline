@@ -96,6 +96,9 @@ public:
     // Execute: parse arguments then invoke handler
     bool execute(const std::vector<std::string>& args) const {
         ParsedArgs<OptGroup> parsed = parse(args);
+        if (!parsed.parseSuccess) {
+            return false;  // Don't execute if parsing failed
+        }
         return invoke(parsed);
     }
     
@@ -141,6 +144,7 @@ public:
             } else if (lookingForOption) {
                 // Invalid option (has -- prefix but not recognized)
                 std::cerr << "Error: Unknown option '--" << optName << "'\n";
+                parsed.parseSuccess = false;
             } else {
                 // Positional argument
                 parsed.positional.push_back(arg);

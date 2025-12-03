@@ -14,6 +14,9 @@ target_link_libraries(test_lambda_types PRIVATE cmdline_hdr_only)
 add_executable(test_parse_invoke src/test_parse_invoke.cpp)
 target_link_libraries(test_parse_invoke PRIVATE cmdline_hdr_only)
 
+add_executable(test_parse_fail src/test_parse_fail.cpp)
+target_link_libraries(test_parse_fail PRIVATE cmdline_hdr_only)
+
 # Option type tests
 add_executable(test_typed_options src/test_typed_options.cpp)
 target_link_libraries(test_typed_options PRIVATE cmdline_hdr_only)
