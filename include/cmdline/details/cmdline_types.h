@@ -26,9 +26,6 @@ namespace cmdline_ct {
 template<typename OptGroup>
 struct ParsedArgs;
 
-template<typename OptGroup>
-using CommandHandler = std::function<bool(const ParsedArgs<OptGroup>&)>;
-
 /**
  * TypedOptionValue template - stores a value with compile-time type information
  */

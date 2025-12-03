@@ -132,64 +132,12 @@ int main() {
     std::cout << "Compile-Time Command Line Demo\n";
     std::cout << "================================\n";
     
-    // Create commands from compile-time specs with inline lambdas
-    // Each command gets its own type based on the lambda!
-    auto showCmd = makeCommand(Commands::showSpec, [](const auto& args) {
-        std::cout << "Show command - Positional args: ";
-        for (const auto& arg : args.positional) {
-            std::cout << arg << " ";
-        }
-        std::cout << "\n";
-        
-        if (auto verbose = args.getInt("verbose")) {
-            std::cout << "  Verbose: " << (*verbose ? "enabled" : "disabled") << "\n";
-        }
-        
-        if (auto count = args.getInt("count")) {
-            std::cout << "  Count: " << *count << " (0x" << std::hex << *count << std::dec << ")\n";
-        }
-        
-        return true;
-    });
-    
-    auto connectCmd = makeCommand(Commands::connectSpec, [](const auto& args) {
-        if (!args.positional.empty()) {
-            std::cout << "Connecting to: " << args.positional[0] << "\n";
-            
-            if (auto port = args.getInt("port")) {
-                std::cout << "  Port: " << *port << "\n";
-            }
-            
-            if (auto retry = args.getInt("retry")) {
-                std::cout << "  Retries: " << *retry << "\n";
-            }
-        }
-        return true;
-    });
-    
-    auto setCmd = makeCommand(Commands::setSpec, [](const auto& args) {
-        if (args.positional.size() >= 2) {
-            std::cout << "Setting " << args.positional[0] << " = " << args.positional[1] << "\n";
-            
-            if (auto timeout = args.getInt("timeout")) {
-                std::cout << "  Timeout: " << *timeout << "ms\n";
-            }
-        }
-        return true;
-    });
-    
-    auto statusCmd = makeCommand(Commands::statusSpec, [](const auto& args) {
-        std::cout << "Status: OK\n";
-        return true;
-    });
-    
-    auto listCmd = makeCommand(Commands::listSpec, [](const auto& args) {
-        std::cout << "Items:\n";
-        std::cout << "  - Item 1\n";
-        std::cout << "  - Item 2\n";
-        std::cout << "  - Item 3\n";
-        return true;
-    });
+    // Create commands from compile-time specs with handler functions
+    auto showCmd = makeCommand(Commands::showSpec, showHandler<decltype(Commands::showSpec.optionGroup)>);
+    auto connectCmd = makeCommand(Commands::connectSpec, connectHandler<decltype(Commands::connectSpec.optionGroup)>);
+    auto setCmd = makeCommand(Commands::setSpec, setHandler<decltype(Commands::setSpec.optionGroup)>);
+    auto statusCmd = makeCommand(Commands::statusSpec, statusHandler<decltype(Commands::statusSpec.optionGroup)>);
+    auto listCmd = makeCommand(Commands::listSpec, listHandler<decltype(Commands::listSpec.optionGroup)>);
     
     // Print command information
     printCommandInfo("Show", *showCmd);

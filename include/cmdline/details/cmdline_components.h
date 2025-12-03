@@ -10,8 +10,33 @@
 
 namespace cmdline_ct {
 
-template<typename OptGroup, typename HandlerType = CommandHandler<OptGroup>>
+/**
+ * CommandHandler - Lightweight template wrapper for command handlers
+ * Avoids std::function overhead by storing the callable directly
+ */
+template<typename OptGroup, typename Callable>
+struct CommandHandler {
+    Callable callable;
+    
+    constexpr CommandHandler(Callable c) : callable(std::move(c)) {}
+    
+    constexpr bool operator()(const ParsedArgs<OptGroup>& args) const {
+        return callable(args);
+    }
+};
+
+// Helper to create CommandHandler with automatic type deduction
+template<typename OptGroup, typename Callable>
+constexpr auto makeCommandHandler(Callable&& c) {
+    return CommandHandler<OptGroup, std::decay_t<Callable>>{std::forward<Callable>(c)};
+}
+
+template<typename OptGroup, typename HandlerType>
 class Command {
+    // Static assertion to ensure HandlerType is callable with correct signature
+    static_assert(std::is_invocable_r_v<bool, HandlerType, const ParsedArgs<OptGroup>&>,
+                  "HandlerType must be callable with signature: bool(const ParsedArgs<OptGroup>&)");
+    
 public:
     constexpr Command(const CommandSpec<OptGroup>& spec, HandlerType handler)
         : m_spec(spec), m_handler(handler) {}
@@ -93,12 +118,14 @@ public:
             const auto& arg = args[i];
             
             // Check if it's an option (starts with -- or matches option name directly)
-            std::string optName;
+            std::string_view optName;
             bool isOpt = false;
+            bool lookingForOption = false;
             
             if (arg.size() > 2 && arg[0] == '-' && arg[1] == '-') {
                 // Option with '--' prefix
-                optName = arg.substr(2);
+                optName = std::string_view(arg).substr(2);
+                lookingForOption = true;
                 isOpt = m_spec.hasOption(optName);
             } else {
                 // Try matching without prefix
@@ -111,6 +138,9 @@ public:
             if (isOpt) {
                 // Found a valid option - parse it and store in the tuple
                 parseOptionIntoTuple(parsed, optName, args, i);
+            } else if (lookingForOption) {
+                // Invalid option (has -- prefix but not recognized)
+                std::cerr << "Error: Unknown option '--" << optName << "'\n";
             } else {
                 // Positional argument
                 parsed.positional.push_back(arg);
@@ -121,7 +151,7 @@ public:
     }
     
     // Parse with argc/argv style arguments
-    ParsedArgs<OptGroup> parse(int argc, char* argv[]) const {
+    ParsedArgs<OptGroup> parse(int argc, const char* argv[]) const {
         std::vector<std::string> args;
         args.reserve(argc);
         for (int i = 0; i < argc; ++i) {
@@ -132,7 +162,7 @@ public:
 
 private:
     // Helper to parse an option and store it in the correct tuple position
-    void parseOptionIntoTuple(ParsedArgs<OptGroup>& parsed, const std::string& optName, 
+    void parseOptionIntoTuple(ParsedArgs<OptGroup>& parsed, std::string_view optName, 
                              const std::vector<std::string>& args, size_t& i) const {
         // Use index_sequence to iterate through all options
         parseOptionIntoTupleImpl(parsed, optName, args, i, 
@@ -140,7 +170,7 @@ private:
     }
     
     template<size_t... Is>
-    void parseOptionIntoTupleImpl(ParsedArgs<OptGroup>& parsed, const std::string& optName,
+    void parseOptionIntoTupleImpl(ParsedArgs<OptGroup>& parsed, std::string_view optName,
                                  const std::vector<std::string>& args, size_t& i,
                                  std::index_sequence<Is...>) const {
         // Try each option index until we find the matching one
@@ -148,7 +178,7 @@ private:
     }
     
     template<size_t I>
-    bool tryParseOption(ParsedArgs<OptGroup>& parsed, const std::string& optName,
+    bool tryParseOption(ParsedArgs<OptGroup>& parsed, std::string_view optName,
                        const std::vector<std::string>& args, size_t& i) const {
         const auto& opt = std::get<I>(m_spec.optionGroup.options);
         if (opt.name != optName) {
