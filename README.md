@@ -5,6 +5,7 @@ A C++17 library for building interactive command-line interfaces with multi-leve
 ## Features
 
 - **Multi-level Mode Support**: Create hierarchical command modes that users can navigate through
+- **Help Query Syntax**: Use `?` to discover commands - type `?` for all commands, `prefix?` for matching commands (e.g., `sta?` shows `start` and `status`)
 - **Partial Command Matching**: Type abbreviated commands (e.g., `sta` for `start`) - exact matches take priority, ambiguous matches are reported with suggestions
 - **Auto-completion**: Full tab completion for commands and subcommands (custom implementation)
 - **Command Matching**: Automatically suggests similar commands when users enter partial or incorrect commands
@@ -163,6 +164,26 @@ config    connect
 [main]> config s<Tab>
 [main]> config set
 ```
+
+### Help Query (? Syntax)
+
+Users can quickly discover available commands using the `?` character:
+
+```
+[main]> ?                    # Show all commands
+[main]> s?                   # Show commands starting with 's': start, status, stop
+[main]> sta?                 # Show commands starting with 'sta': start, status
+[main]> mode ?               # Show all available modes
+[main]> mode dev?            # Show modes starting with 'dev': development
+```
+
+Features:
+- **Quick discovery**: `?` shows all items, `prefix?` shows matching items
+- **Works everywhere**: SubcommandDispatcher for commands, ModeManager for modes
+- **No execution**: Just displays information, never executes commands
+- **Helpful for learning**: Explore the interface without reading docs
+
+See [HELP_QUERY.md](docs/HELP_QUERY.md) for detailed documentation.
 
 ### Partial Command Matching
 

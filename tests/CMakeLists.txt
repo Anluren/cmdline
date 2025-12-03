@@ -49,3 +49,6 @@ target_link_libraries(test_mode_execute_command PRIVATE cmdline_hdr_only)
 
 add_executable(test_partial_matching test_partial_matching.cpp)
 target_link_libraries(test_partial_matching PRIVATE cmdline_hdr_only)
+
+add_executable(test_help_query test_help_query.cpp)
+target_link_libraries(test_help_query PRIVATE cmdline_hdr_only)

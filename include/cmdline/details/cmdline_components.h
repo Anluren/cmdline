@@ -287,7 +287,20 @@ public:
             return false;
         }
         
-        const std::string& subcmdName = args[0];
+        std::string subcmdName = args[0];
+        
+        // Handle ? query syntax: "?" shows all, "prefix?" shows matching commands
+        if (!subcmdName.empty() && subcmdName.back() == '?') {
+            if (subcmdName.length() == 1) {
+                // Just "?" - show all subcommands
+                showHelp();
+            } else {
+                // "prefix?" - show matching subcommands
+                std::string prefix = subcmdName.substr(0, subcmdName.length() - 1);
+                showMatchingCommands(prefix);
+            }
+            return true;
+        }
         
         // Special commands
         if (subcmdName == "help" || subcmdName == "--help" || subcmdName == "-h") {
@@ -319,6 +332,25 @@ public:
             args.emplace_back(argv[i]);
         }
         return execute(args);
+    }
+    
+    // Show subcommands matching a prefix
+    void showMatchingCommands(const std::string& prefix) const {
+        std::vector<std::string> matches;
+        for (const auto& [name, _] : m_handlers) {
+            if (name.compare(0, prefix.length(), prefix) == 0) {
+                matches.push_back(name);
+            }
+        }
+        
+        if (matches.empty()) {
+            std::cout << "No subcommands matching '" << prefix << "'\n";
+        } else {
+            std::cout << "Subcommands matching '" << prefix << "':\n";
+            for (const auto& name : matches) {
+                std::cout << "  " << name << "\n";
+            }
+        }
     }
     
     // Show help for all subcommands
@@ -439,12 +471,44 @@ public:
             return "";
         }
         
+        std::string cmd = args[0];
+        
+        // Handle ? query syntax for modes: "mode ?" or "mode prefix?"
+        if (cmd == "mode" && args.size() > 1 && !args[1].empty() && args[1].back() == '?') {
+            std::string query = args[1];
+            if (query.length() == 1) {
+                // "mode ?" - show all modes
+                std::cout << "Available modes:\n";
+                for (const auto& [name, _] : m_modes) {
+                    std::cout << "  " << name << "\n";
+                }
+            } else {
+                // "mode prefix?" - show matching modes
+                std::string prefix = query.substr(0, query.length() - 1);
+                std::vector<std::string> matches;
+                for (const auto& [name, _] : m_modes) {
+                    if (name.compare(0, prefix.length(), prefix) == 0) {
+                        matches.push_back(name);
+                    }
+                }
+                if (matches.empty()) {
+                    std::cout << "No modes matching '" << prefix << "'\n";
+                } else {
+                    std::cout << "Modes matching '" << prefix << "':\n";
+                    for (const auto& name : matches) {
+                        std::cout << "  " << name << "\n";
+                    }
+                }
+            }
+            return "";
+        }
+        
         // Check for mode transition commands
-        if (args[0] == "exit" || args[0] == "quit") {
+        if (cmd == "exit" || cmd == "quit") {
             return "exit";
         }
         
-        if (args[0] == "mode") {
+        if (cmd == "mode") {
             if (args.size() > 1) {
                 std::string newMode = args[1];
                 auto it = findMode(newMode);
