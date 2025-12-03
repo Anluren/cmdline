@@ -2,7 +2,7 @@
  * Example demonstrating compile-time command definitions
  */
 
-#include "cmdline_constexpr.h"
+#include "cmdline/cmdline_hdr_only.h"
 #include <iostream>
 #include <iomanip>
 

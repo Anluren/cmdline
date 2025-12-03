@@ -11,11 +11,14 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 # Library target
 add_library(cmdline SHARED
-    cmdline.cpp
+    src/cmdline.cpp
 )
 
-target_include_directories(cmdline PUBLIC
-    ${CMAKE_CURRENT_SOURCE_DIR}
+target_include_directories(cmdline 
+    PUBLIC
+        ${CMAKE_CURRENT_SOURCE_DIR}/include
+    PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/src
 )
 
 # Enable shared_from_this for Mode class
@@ -27,7 +30,7 @@ target_compile_options(cmdline PRIVATE
 
 # Example executable
 add_executable(example
-    example.cpp
+    examples/example.cpp
 )
 
 target_link_libraries(example PRIVATE
@@ -36,132 +39,140 @@ target_link_libraries(example PRIVATE
 
 # Compile-time example (header-only, no library dependency)
 add_executable(example_constexpr
-    example_constexpr.cpp
+    examples/example_constexpr.cpp
 )
 
 target_include_directories(example_constexpr PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 
 # Test executables for compile-time features
 add_executable(constexpr_test
-    constexpr_test.cpp
+    tests/constexpr_test.cpp
 )
 
 target_include_directories(constexpr_test PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 
 add_executable(test_lambda_types
-    test_lambda_types.cpp
+    tests/test_lambda_types.cpp
 )
 
 target_include_directories(test_lambda_types PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 
 add_executable(test_parse_invoke
-    test_parse_invoke.cpp
+    tests/test_parse_invoke.cpp
 )
 
 target_include_directories(test_parse_invoke PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 
 add_executable(test_typed_options
-    test_typed_options.cpp
+    tests/test_typed_options.cpp
 )
 
 target_include_directories(test_typed_options PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 
 add_executable(test_variadic_groups
-    test_variadic_groups.cpp
+    tests/test_variadic_groups.cpp
 )
 
 target_include_directories(test_variadic_groups PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 
 add_executable(test_int_range
-    test_int_range.cpp
+    tests/test_int_range.cpp
 )
 
 target_include_directories(test_int_range PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 
 add_executable(test_array_range
-    test_array_range.cpp
+    tests/test_array_range.cpp
 )
 
 target_include_directories(test_array_range PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 
 add_executable(test_option_matching
-    test_option_matching.cpp
+    tests/test_option_matching.cpp
 )
 
 target_include_directories(test_option_matching PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 
 add_executable(test_subcommands
-    test_subcommands.cpp
+    tests/test_subcommands.cpp
 )
 
 target_include_directories(test_subcommands PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 
 add_executable(test_mode_manager
-    test_mode_manager.cpp
+    tests/test_mode_manager.cpp
 )
 
 target_include_directories(test_mode_manager PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 
 add_executable(test_default_values
-    test_default_values.cpp
+    tests/test_default_values.cpp
 )
 
 target_include_directories(test_default_values PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 
 add_executable(test_option_value
-    test_option_value.cpp
+    tests/test_option_value.cpp
 )
 
 target_include_directories(test_option_value PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 
 add_executable(test_hierarchy
-    test_hierarchy.cpp
+    tests/test_hierarchy.cpp
 )
 
 target_include_directories(test_hierarchy PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 
 add_executable(test_hierarchy_multi
-    test_hierarchy_multi.cpp
+    tests/test_hierarchy_multi.cpp
 )
 
 target_include_directories(test_hierarchy_multi PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 
 add_executable(test_hierarchy_hide_options
-    test_hierarchy_hide_options.cpp
+    tests/test_hierarchy_hide_options.cpp
 )
 
 target_include_directories(test_hierarchy_hide_options PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+)
+
+add_executable(test_mode_execute_command
+    tests/test_mode_execute_command.cpp
+)
+
+target_include_directories(test_mode_execute_command PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 
 # Install targets
@@ -170,12 +181,13 @@ install(TARGETS cmdline
     ARCHIVE DESTINATION lib
 )
 
-install(FILES cmdline.h
+install(FILES src/cmdline.h
     DESTINATION include
 )
 
-install(FILES cmdline_constexpr.h
+install(DIRECTORY include/cmdline
     DESTINATION include
+    FILES_MATCHING PATTERN "*.h"
 )
 
 # Print build info

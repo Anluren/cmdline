@@ -2,7 +2,7 @@
  * Demonstration of typed options and option group composition
  */
 
-#include "cmdline_constexpr.h"
+#include "cmdline/cmdline_hdr_only.h"
 #include <iostream>
 #include <iomanip>
 

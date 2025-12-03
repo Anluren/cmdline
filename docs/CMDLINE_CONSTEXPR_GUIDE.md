@@ -1,4 +1,4 @@
-# cmdline_constexpr.h - Comprehensive Guide
+# cmdline_hdr_only.h - Comprehensive Guide
 
 ## Table of Contents
 1. [Overview](#overview)
@@ -17,7 +17,7 @@
 
 ## Overview
 
-`cmdline_constexpr.h` is a modern C++17 header-only library for building type-safe, compile-time command-line interfaces. It leverages template metaprogramming and constexpr to provide zero-overhead command definitions with full type safety.
+`cmdline_hdr_only.h` is a modern C++17 header-only library for building type-safe, compile-time command-line interfaces. It leverages template metaprogramming and constexpr to provide zero-overhead command definitions with full type safety.
 
 ### Key Features
 
@@ -697,7 +697,7 @@ static_assert(!opt.isValid(80), "80 is invalid");
 ### Example 1: Simple Server Command with argc/argv
 
 ```cpp
-#include "cmdline_constexpr.h"
+#include "cmdline_hdr_only.h"
 #include <iostream>
 
 using namespace cmdline_ct;
@@ -749,7 +749,7 @@ int main(int argc, char* argv[]) {
 ### Example 2: Git-like Subcommands
 
 ```cpp
-#include "cmdline_constexpr.h"
+#include "cmdline_hdr_only.h"
 #include <iostream>
 
 using namespace cmdline_ct;
@@ -811,7 +811,7 @@ int main(int argc, char* argv[]) {
 ### Example 3: Interactive Multi-Mode Application
 
 ```cpp
-#include "cmdline_constexpr.h"
+#include "cmdline_hdr_only.h"
 #include <iostream>
 #include <sstream>
 
@@ -1262,7 +1262,7 @@ Possible additions (not currently implemented):
 
 ## Conclusion
 
-`cmdline_constexpr.h` provides a modern, type-safe approach to command-line parsing in C++17. Its key strengths are:
+`cmdline_hdr_only.h` provides a modern, type-safe approach to command-line parsing in C++17. Its key strengths are:
 
 - **Zero-overhead abstractions**: Compile-time specifications
 - **Type safety**: Compile-time option types with runtime enforcement

@@ -2,7 +2,7 @@
  * Demonstration of separated parse() and invoke() functions
  */
 
-#include "cmdline_constexpr.h"
+#include "cmdline/cmdline_hdr_only.h"
 #include <iostream>
 
 using namespace cmdline_ct;
