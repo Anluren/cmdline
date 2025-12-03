@@ -10,7 +10,7 @@
 #define CMDLINE_HDR_ONLY_H
 
 // Include all library components
-#include "cmdline_types.h"
-#include "cmdline_components.h"
+#include "details/cmdline_types.h"
+#include "details/cmdline_components.h"
 
 #endif // CMDLINE_HDR_ONLY_H

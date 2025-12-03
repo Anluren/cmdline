@@ -2,7 +2,7 @@
  * Example usage of the command line library
  */
 
-#include "cmdline/cmdline.h"
+#include "cmdline.h"
 #include <iostream>
 #include <iomanip>
 #include <array>

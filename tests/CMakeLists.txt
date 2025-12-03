@@ -1,0 +1,48 @@
+# Test executables for compile-time features
+add_executable(constexpr_test constexpr_test.cpp)
+target_link_libraries(constexpr_test PRIVATE cmdline_hdr_only)
+
+add_executable(test_lambda_types test_lambda_types.cpp)
+target_link_libraries(test_lambda_types PRIVATE cmdline_hdr_only)
+
+add_executable(test_parse_invoke test_parse_invoke.cpp)
+target_link_libraries(test_parse_invoke PRIVATE cmdline_hdr_only)
+
+add_executable(test_typed_options test_typed_options.cpp)
+target_link_libraries(test_typed_options PRIVATE cmdline_hdr_only)
+
+add_executable(test_variadic_groups test_variadic_groups.cpp)
+target_link_libraries(test_variadic_groups PRIVATE cmdline_hdr_only)
+
+add_executable(test_int_range test_int_range.cpp)
+target_link_libraries(test_int_range PRIVATE cmdline_hdr_only)
+
+add_executable(test_array_range test_array_range.cpp)
+target_link_libraries(test_array_range PRIVATE cmdline_hdr_only)
+
+add_executable(test_option_matching test_option_matching.cpp)
+target_link_libraries(test_option_matching PRIVATE cmdline_hdr_only)
+
+add_executable(test_subcommands test_subcommands.cpp)
+target_link_libraries(test_subcommands PRIVATE cmdline_hdr_only)
+
+add_executable(test_mode_manager test_mode_manager.cpp)
+target_link_libraries(test_mode_manager PRIVATE cmdline_hdr_only)
+
+add_executable(test_default_values test_default_values.cpp)
+target_link_libraries(test_default_values PRIVATE cmdline_hdr_only)
+
+add_executable(test_option_value test_option_value.cpp)
+target_link_libraries(test_option_value PRIVATE cmdline_hdr_only)
+
+add_executable(test_hierarchy test_hierarchy.cpp)
+target_link_libraries(test_hierarchy PRIVATE cmdline_hdr_only)
+
+add_executable(test_hierarchy_multi test_hierarchy_multi.cpp)
+target_link_libraries(test_hierarchy_multi PRIVATE cmdline_hdr_only)
+
+add_executable(test_hierarchy_hide_options test_hierarchy_hide_options.cpp)
+target_link_libraries(test_hierarchy_hide_options PRIVATE cmdline_hdr_only)
+
+add_executable(test_mode_execute_command test_mode_execute_command.cpp)
+target_link_libraries(test_mode_execute_command PRIVATE cmdline_hdr_only)
