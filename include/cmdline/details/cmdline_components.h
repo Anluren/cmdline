@@ -253,6 +253,33 @@ public:
         };
     }
     
+private:
+    // Helper: Find command by exact or partial match
+    auto findCommand(const std::string& name) const {
+        // Try exact match first
+        auto it = m_handlers.find(name);
+        if (it != m_handlers.end()) return it;
+        
+        // Try partial match
+        std::vector<decltype(m_handlers.begin())> matches;
+        for (auto iter = m_handlers.begin(); iter != m_handlers.end(); ++iter) {
+            if (iter->first.compare(0, name.length(), name) == 0) {
+                matches.push_back(iter);
+            }
+        }
+        
+        if (matches.size() == 1) return matches[0];
+        
+        if (matches.size() > 1) {
+            std::cerr << "Ambiguous command '" << name << "'. Did you mean:\n";
+            for (const auto& match : matches) {
+                std::cerr << "  " << match->first << "\n";
+            }
+        }
+        return m_handlers.end();
+    }
+    
+public:
     // Execute with subcommand dispatch
     bool execute(const std::vector<std::string>& args) {
         if (args.empty()) {
@@ -271,8 +298,8 @@ public:
             return true;
         }
         
-        // Find and execute subcommand
-        auto it = m_handlers.find(subcmdName);;
+        // Find and execute subcommand (with partial matching support)
+        auto it = findCommand(subcmdName);
         if (it != m_handlers.end()) {
             // Pass remaining args to subcommand
             std::vector<std::string> subcmdArgs(args.begin() + 1, args.end());
@@ -380,6 +407,31 @@ public:
         };
     }
     
+private:
+    // Helper: Find mode by exact or partial match
+    auto findMode(const std::string& name) const {
+        auto it = m_modes.find(name);
+        if (it != m_modes.end()) return it;
+        
+        std::vector<decltype(m_modes.begin())> matches;
+        for (auto iter = m_modes.begin(); iter != m_modes.end(); ++iter) {
+            if (iter->first.compare(0, name.length(), name) == 0) {
+                matches.push_back(iter);
+            }
+        }
+        
+        if (matches.size() == 1) return matches[0];
+        
+        if (matches.size() > 1) {
+            std::cerr << "Ambiguous mode '" << name << "'. Did you mean:\n";
+            for (const auto& match : matches) {
+                std::cerr << "  " << match->first << "\n";
+            }
+        }
+        return m_modes.end();
+    }
+    
+public:
     // Execute command in current mode
     // Returns the next mode to transition to (or empty to stay)
     std::string execute(const std::vector<std::string>& args) {
@@ -395,12 +447,18 @@ public:
         if (args[0] == "mode") {
             if (args.size() > 1) {
                 std::string newMode = args[1];
-                if (m_modes.find(newMode) != m_modes.end()) {
-                    m_currentMode = newMode;
-                    std::cout << "Switched to mode: " << newMode << "\n";
-                    return newMode;
-                } else {
+                auto it = findMode(newMode);
+                if (it != m_modes.end()) {
+                    m_currentMode = it->first;
+                    std::cout << "Switched to mode: " << it->first << "\n";
+                    return it->first;
+                } else if (m_modes.find(newMode) == m_modes.end() && 
+                          std::count_if(m_modes.begin(), m_modes.end(),
+                              [&](const auto& p) { return p.first.compare(0, newMode.length(), newMode) == 0; }) == 0) {
                     std::cerr << "Unknown mode: " << newMode << "\n";
+                    return "";
+                } else {
+                    // Ambiguous match already reported by findMode
                     return "";
                 }
             } else {
