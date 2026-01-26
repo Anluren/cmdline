@@ -399,7 +399,7 @@ public:
     
     // Show help for specific subcommand
     bool showSubcommandHelp(const std::string& subcmdName) const {
-        auto it = m_handlers.find(subcmdName);;
+        auto it = m_handlers.find(subcmdName);
         if (it == m_handlers.end()) {
             std::cerr << "Unknown subcommand: " << subcmdName << "\n";
             return false;

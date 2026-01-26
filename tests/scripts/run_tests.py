@@ -217,7 +217,44 @@ def main():
             "Available subcommands:"
         ]
     ))
-    
+
+    # Test 9: Comprehensive Coverage
+    print("Running comprehensive coverage tests...")
+    results.append(run_test(
+        "test_comprehensive_coverage",
+        expected_output=[
+            "Comprehensive Coverage Tests",
+            "Test 1: OptionGroup visitOption",
+            "Test 2: IntOption range validation edge cases",
+            "Test 3: ParsedArgs parseSuccess flag",
+            "Test 4: Command argc/argv parsing",
+            "Test 5: ModeManager edge cases",
+            "Test 6: Ambiguous partial matching",
+            "Test 7: SubcommandDispatcher specific help",
+            "Test 8: Command showHierarchy",
+            "Test 9: SubcommandDispatcher showHierarchy",
+            "Test 10: ModeManager showHierarchy",
+            "Test 11: Integer parsing edge cases",
+            "Test 12: ParsedArgs typed tuple access",
+            "Test 13: Unknown mode handling",
+            "Test 14: SubcommandDispatcher unknown command",
+            "Test 15: Command isOption helper",
+            "Test 16: Option parsing without -- prefix",
+            "Test 17: makeOptionGroup named variant",
+            "Test 18: SubcommandDispatcher empty args and getters",
+            "Test 19: SubcommandDispatcher argc/argv execute",
+            "Test 20: ModeManager argc/argv execute",
+            "Test 21: ModeManager no handler for current mode",
+            "Test 22: IntArrayOption range validation constructors",
+            "Test 23: ModeManager addMode with SubcommandDispatcher",
+            "Test 24: Type mismatch in getter functions",
+            "Test 25: StringArrayOption full coverage",
+            "Test 26: OptionGroup size() function",
+            "Test 27: Non-existent option lookups",
+            "All comprehensive tests passed!"
+        ]
+    ))
+
     print()
     print("=" * 60)
     print("Test Results")

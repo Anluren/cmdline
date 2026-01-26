@@ -66,3 +66,7 @@ target_link_libraries(test_partial_matching PRIVATE cmdline_hdr_only)
 
 add_executable(test_help_query src/test_help_query.cpp)
 target_link_libraries(test_help_query PRIVATE cmdline_hdr_only)
+
+# Comprehensive coverage tests
+add_executable(test_comprehensive_coverage src/test_comprehensive_coverage.cpp)
+target_link_libraries(test_comprehensive_coverage PRIVATE cmdline_hdr_only)
