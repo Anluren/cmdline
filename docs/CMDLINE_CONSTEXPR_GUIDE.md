@@ -100,24 +100,40 @@ Template-based storage for parsed option values with compile-time type informati
 ```cpp
 template<typename T>
 struct TypedOptionValue {
+    using value_type = T;
+
     T value;
     bool is_set = false;
-    
-    void set(T v);
+
+    // Constructors
+    TypedOptionValue();
+    explicit TypedOptionValue(const T& val);
+    explicit TypedOptionValue(T&& val);
+
+    // Set the value (overloaded for copy and move)
+    void set(const T& val);
+    void set(T&& val);
     void reset();
-    
-    // Convenient accessors
+
+    // Direct access
+    T& get();
+    const T& get() const;
+
+    // Convenient operators
     T& operator*();
+    const T& operator*() const;
     T* operator->();
-    explicit operator bool() const;
+    const T* operator->() const;
+    explicit operator bool() const;  // Returns is_set
 };
 ```
 
 **Features:**
-- Type-safe value storage with compile-time type
+- Type-safe value storage with compile-time type via `value_type` alias
 - `is_set` flag to track if value was provided
-- Convenient operators for easy access
-- Move semantics support
+- `get()` method for direct value access
+- Convenient dereference operators for pointer-like access
+- Move semantics support with overloaded `set()` methods
 
 ### parseInt Function
 
@@ -141,15 +157,24 @@ Template-based container for parsed command-line arguments with compile-time typ
 template<typename OptGroup>
 struct ParsedArgs {
     std::vector<std::string> positional;
-    
+
     // Tuple of TypedOptionValue matching the OptionGroup
-    using OptionsTuple = std::tuple<TypedOptionValue<T1>, TypedOptionValue<T2>, ...>;
+    // (automatically generated from option types)
     OptionsTuple options;
-    
+
+    // Pointer to the option group for runtime name lookups
+    const OptGroup* optionGroup = nullptr;
+
+    // Track whether parsing succeeded (no unknown options)
+    bool parseSuccess = true;
+
     // Compile-time accessors by index
     template<size_t I>
     auto& get();
-    
+
+    template<size_t I>
+    const auto& get() const;
+
     // Runtime accessors by name
     bool hasOption(const std::string& name) const;
     std::optional<int64_t> getInt(const std::string& name) const;
@@ -159,11 +184,13 @@ struct ParsedArgs {
 };
 ```
 
-**Key Changes:**
+**Key Features:**
 - Options stored in `std::tuple` instead of `std::map` for compile-time type safety
 - Each option's type is known at compile time
-- Compile-time access via `get<I>()` for index-based access
+- Compile-time access via `get<I>()` for index-based access (O(1))
 - Runtime access via `getInt()`, `getString()`, etc. for name-based access
+- `parseSuccess` flag indicates if parsing encountered unknown `--option` arguments
+- `optionGroup` pointer enables runtime name-to-index lookups
 
 **Usage:**
 ```cpp
@@ -326,10 +353,21 @@ template<typename OptGroup>
 struct CommandSpec {
     std::string_view name;
     std::string_view description;
-    OptGroup options;
-    
-    const AnyOption* getOptionSpec(std::string_view name) const;
-    std::vector<AnyOption> getAllOptions() const;
+    OptGroup optionGroup;
+
+    // Helper struct for runtime option iteration
+    struct OptionInfo {
+        std::string_view name;
+        std::string_view description;
+        bool required;
+        bool is_int;
+        bool is_array;
+        std::optional<int64_t> min_value;
+        std::optional<int64_t> max_value;
+    };
+
+    bool hasOption(std::string_view name) const;
+    std::vector<OptionInfo> getAllOptions() const;
 };
 ```
 
@@ -401,7 +439,12 @@ bool invoke(const ParsedArgs<OptGroup>& parsed);  // Just invoke handler
 // argc/argv interface (for main() style arguments)
 bool execute(int argc, char* argv[]);  // Parse + invoke from argv
 ParsedArgs<OptGroup> parse(int argc, char* argv[]);  // Parse from argv
+
+// Debugging and introspection
+void showHierarchy(const std::string& indent = "", bool showOptions = true) const;
 ```
+
+**Note on `execute()` behavior:** If parsing fails (e.g., unknown `--option`), `execute()` returns `false` without invoking the handler. Check `ParsedArgs::parseSuccess` when using `parse()` directly.
 
 ---
 
@@ -470,8 +513,11 @@ git->execute(args);  // Routes to commitCmd
 **Features:**
 - Automatic routing based on first argument
 - Built-in help system (`help`, `--help`, `-h`)
+- Help query syntax (`?` and `prefix?`) for discovering subcommands
+- Partial command matching with ambiguity detection
 - Passes remaining arguments to subcommand
 - Returns false for unknown subcommands
+- `showHierarchy()` method for debugging and introspection
 
 ---
 
@@ -566,6 +612,12 @@ std::string_view getCurrentMode() const;
 bool setMode(std::string_view modeName);  // Programmatic mode switch
 bool hasMode(std::string_view modeName) const;
 std::vector<std::string> getModes() const;
+
+// Execute a command string (parses and executes)
+std::string executeCommand(std::string_view commandLine);
+
+// Debugging and introspection
+void showHierarchy(bool showOptions = true) const;
 ```
 
 **Interactive Application Pattern:**
@@ -616,12 +668,13 @@ The library supports both formats interchangeably:
 ### Parsing Algorithm
 
 1. **Identify options**: Check if argument matches option name (with or without `--`)
-2. **Consume values**: 
+2. **Consume values**:
    - Single values: Next argument
    - Arrays: Collect until next option or end
 3. **Range validation**: For integer types, filter out-of-range values
-4. **Store**: Place in `ParsedArgs::options` map
+4. **Store**: Place in corresponding `TypedOptionValue` in the `ParsedArgs::options` tuple
 5. **Positional**: Arguments that don't match options go to `ParsedArgs::positional`
+6. **Error tracking**: Unknown `--option` arguments set `parseSuccess` to false
 
 ### argc/argv Interface
 
@@ -1080,7 +1133,7 @@ mgr->addMode("mode2", cmd);  // Same command in multiple modes
 
 ### Custom Value Parsing
 
-Extend `OptionValue::parseInt` for custom formats:
+The library provides `parseInt()` as a free function in the `cmdline_ct` namespace:
 
 ```cpp
 // The library already supports:
@@ -1098,18 +1151,38 @@ auto handler = [](const ParsedArgs& args) {
 };
 ```
 
-### Dynamic Option Lists
+### Iterating Options at Runtime
 
-For options determined at runtime, use the map directly:
+Since options are stored in a tuple, you cannot iterate them like a map. For runtime iteration, use the command spec's `getAllOptions()` method to get option metadata, then access values by name:
 
 ```cpp
-auto handler = [](const ParsedArgs& args) {
-    for (const auto& [name, value] : args.options) {
-        std::cout << "Option: " << name << "\n";
-        // Access value fields based on type
+auto handler = [&spec](const auto& args) {
+    // Get option metadata from spec
+    auto optInfos = spec.getAllOptions();
+    for (const auto& info : optInfos) {
+        std::cout << "Option: " << info.name;
+        if (info.is_int && !info.is_array) {
+            if (auto val = args.getInt(std::string(info.name))) {
+                std::cout << " = " << *val;
+            }
+        } else if (!info.is_int && !info.is_array) {
+            if (auto val = args.getString(std::string(info.name))) {
+                std::cout << " = " << *val;
+            }
+        }
+        std::cout << "\n";
     }
     return true;
 };
+```
+
+For compile-time iteration over the tuple, use `get<I>()`:
+
+```cpp
+// Access each option by index
+auto& opt0 = args.get<0>();  // First option
+auto& opt1 = args.get<1>();  // Second option
+// etc.
 ```
 
 ### Nested Subcommands

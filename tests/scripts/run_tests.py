@@ -255,6 +255,41 @@ def main():
         ]
     ))
 
+    # Test 10: Full Coverage
+    print("Running full coverage tests...")
+    results.append(run_test(
+        "test_full_coverage",
+        expected_output=[
+            "Full Coverage Tests",
+            "Test 1: Type traits coverage",
+            "Test 2: CommandSpec findOption and numOptions",
+            "Test 3: OptionGroup num_options static constexpr",
+            "Test 4: ParsedArgs with null optionGroup",
+            "Test 5: ParsedArgs const get<I>()",
+            "Test 6: Partial range validation",
+            "Test 7: Mode transitions returning new mode name",
+            "Test 8: ModeManager addMode with Command",
+            "Test 9: SubcommandDispatcher showMatchingCommands",
+            "Test 10: OptionSpecBase derived() methods",
+            "Test 11: Command::parse with const char* argv[]",
+            "Test 12: makeCommandHandler helper",
+            "Test 13: Integer parsing additional edge cases",
+            "Test 14: Positional arguments",
+            "Test 15: All option constructor variants",
+            "Test 16: Command getters",
+            "Test 17: ModeManager getModes",
+            "Test 18: SubcommandDispatcher help flags",
+            "Test 19: Command invoke directly",
+            "Test 20: Range filtering in arrays",
+            "Test 21: ModeManager executeCommand",
+            "Test 22: Command showHierarchy range display",
+            "Test 23: ParsedArgs hasOption",
+            "Test 24: getAllOptions returns correct info",
+            "Test 25: Unique partial match success",
+            "All full coverage tests passed!"
+        ]
+    ))
+
     print()
     print("=" * 60)
     print("Test Results")

@@ -70,3 +70,7 @@ target_link_libraries(test_help_query PRIVATE cmdline_hdr_only)
 # Comprehensive coverage tests
 add_executable(test_comprehensive_coverage src/test_comprehensive_coverage.cpp)
 target_link_libraries(test_comprehensive_coverage PRIVATE cmdline_hdr_only)
+
+# Full coverage tests (additional edge cases)
+add_executable(test_full_coverage src/test_full_coverage.cpp)
+target_link_libraries(test_full_coverage PRIVATE cmdline_hdr_only)
