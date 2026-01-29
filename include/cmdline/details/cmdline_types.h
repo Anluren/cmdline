@@ -27,6 +27,22 @@ template<typename OptGroup>
 struct ParsedArgs;
 
 /**
+ * OutputContext - holds output streams for command execution
+ * Allows redirecting output to any std::ostream (e.g., stringstream for testing)
+ */
+struct OutputContext {
+    std::ostream* out = &std::cout;
+    std::ostream* err = &std::cerr;
+
+    OutputContext() = default;
+    OutputContext(std::ostream& o, std::ostream& e) : out(&o), err(&e) {}
+    explicit OutputContext(std::ostream& both) : out(&both), err(&both) {}
+
+    std::ostream& output() const { return *out; }
+    std::ostream& error() const { return *err; }
+};
+
+/**
  * TypedOptionValue template - stores a value with compile-time type information
  */
 template<typename T>

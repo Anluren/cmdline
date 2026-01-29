@@ -74,3 +74,7 @@ target_link_libraries(test_comprehensive_coverage PRIVATE cmdline_hdr_only)
 # Full coverage tests (additional edge cases)
 add_executable(test_full_coverage src/test_full_coverage.cpp)
 target_link_libraries(test_full_coverage PRIVATE cmdline_hdr_only)
+
+# Output stream tests
+add_executable(test_output_streams src/test_output_streams.cpp)
+target_link_libraries(test_output_streams PRIVATE cmdline_hdr_only)
