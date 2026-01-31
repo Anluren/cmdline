@@ -568,17 +568,19 @@ inline auto makeDispatcher(std::string_view name, std::string_view description, 
 }
 
 /**
- * Mode manager for interactive command mode transitions
- * Allows switching between different command contexts (modes)
+ * CLI - Main interface for interactive command-line applications
+ * Manages modes, command dispatch, and mode transitions
+ *
+ * Formerly known as ModeManager
  */
-class ModeManager {
+class CLI {
 public:
     // Handler accepts streams: returns next mode name (or empty to stay)
     using ModeHandler = std::function<std::string(const std::vector<std::string>&, std::ostream&, std::ostream&)>;
     // Legacy handler type without streams
     using LegacyModeHandler = std::function<std::string(const std::vector<std::string>&)>;
 
-    ModeManager() : m_currentMode("default") {}
+    CLI() : m_currentMode("default") {}
 
     // Output context management
     void setOutputContext(const OutputContext& ctx) { m_context = ctx; }
@@ -827,17 +829,22 @@ private:
     OutputContext m_context;
 };
 
-// Helper to create mode manager
-inline auto makeModeManager() {
-    return std::make_shared<ModeManager>();
+// Helper to create CLI
+inline auto makeCLI() {
+    return std::make_shared<CLI>();
 }
 
-// Helper to create mode manager with output context
-inline auto makeModeManager(const OutputContext& ctx) {
-    auto mgr = std::make_shared<ModeManager>();
-    mgr->setOutputContext(ctx);
-    return mgr;
+// Helper to create CLI with output context
+inline auto makeCLI(const OutputContext& ctx) {
+    auto cli = std::make_shared<CLI>();
+    cli->setOutputContext(ctx);
+    return cli;
 }
+
+// Legacy aliases for backward compatibility
+using ModeManager = CLI;
+inline auto makeModeManager() { return makeCLI(); }
+inline auto makeModeManager(const OutputContext& ctx) { return makeCLI(ctx); }
 
 } // namespace cmdline_ct
 

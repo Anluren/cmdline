@@ -88,9 +88,9 @@ int main() {
     std::cout << "\n";
     
     // Test 8: Mode manager partial matching
-    std::cout << "Test 8: ModeManager partial matching\n";
+    std::cout << "Test 8: CLI partial matching\n";
     std::cout << "=====================================\n";
-    auto modeManager = makeModeManager();
+    auto cli = makeCLI();
     
     auto devOpts = makeOptions(IntOption{"--debug", "Debug level", 0, 5});
     auto devSpec = CommandSpec{"dev", "Development mode", devOpts};
@@ -106,21 +106,21 @@ int main() {
         return true;
     });
     
-    modeManager->addMode("development", devCmd);
-    modeManager->addMode("production", prodCmd);
-    modeManager->setMode("development");
+    cli->addMode("development", devCmd);
+    cli->addMode("production", prodCmd);
+    cli->setMode("development");
     
     std::cout << "\nTest 8a: Exact mode switch 'production'\n";
-    modeManager->executeCommand("mode production");
+    cli->executeCommand("mode production");
     
     std::cout << "\nTest 8b: Partial mode switch 'dev' (matches 'development')\n";
-    modeManager->executeCommand("mode dev");
+    cli->executeCommand("mode dev");
     
     std::cout << "\nTest 8c: Partial mode switch 'prod' (matches 'production')\n";
-    modeManager->executeCommand("mode prod");
+    cli->executeCommand("mode prod");
     
     std::cout << "\nTest 8d: Ambiguous mode 'pro' (matches 'production' but might be ambiguous with 'prod...')\n";
-    modeManager->executeCommand("mode pro");
+    cli->executeCommand("mode pro");
     
     std::cout << "\nAll partial matching tests completed!\n";
     

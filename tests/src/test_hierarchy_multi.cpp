@@ -81,8 +81,8 @@ int main() {
     statusCmd->showHierarchy("  ");
     std::cout << "\n";
 
-    // Test 4: ModeManager with commands
-    std::cout << "Test 4: ModeManager with different modes\n";
+    // Test 4: CLI with commands
+    std::cout << "Test 4: CLI with different modes\n";
     std::cout << "-----------------------------------------\n";
     
     constexpr auto devSpec = CommandSpec(
@@ -106,12 +106,12 @@ int main() {
     auto devCmd = makeCommand(devSpec, [](const auto& args) { return true; });
     auto prodCmd = makeCommand(prodSpec, [](const auto& args) { return true; });
     
-    ModeManager manager;
-    manager.addMode("dev", devCmd);
-    manager.addMode("prod", prodCmd);
-    
-    manager.setMode("dev");
-    manager.showHierarchy();
+    CLI cli;
+    cli.addMode("dev", devCmd);
+    cli.addMode("prod", prodCmd);
+
+    cli.setMode("dev");
+    cli.showHierarchy();
     std::cout << "\n";
 
     // Test 5: Nested structure visualization

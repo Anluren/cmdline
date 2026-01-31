@@ -240,10 +240,10 @@ void testPartialRangeValidation() {
 void testModeTransitions() {
     std::cout << "Test 7: Mode transitions returning new mode name\n";
 
-    auto mgr = makeModeManager();
+    auto cli = makeCLI();
 
     // Default mode that transitions to other modes based on command
-    mgr->addMode("default", [](const std::vector<std::string>& args) -> std::string {
+    cli->addMode("default", [](const std::vector<std::string>& args) -> std::string {
         if (!args.empty()) {
             if (args[0] == "go-alpha") return "alpha";
             if (args[0] == "go-beta") return "beta";
@@ -251,53 +251,53 @@ void testModeTransitions() {
         return "";  // Stay in current mode
     });
 
-    mgr->addMode("alpha", [](const std::vector<std::string>& args) -> std::string {
+    cli->addMode("alpha", [](const std::vector<std::string>& args) -> std::string {
         if (!args.empty() && args[0] == "back") return "default";
         std::cout << "[alpha mode]\n";
         return "";
     });
 
-    mgr->addMode("beta", [](const std::vector<std::string>& args) -> std::string {
+    cli->addMode("beta", [](const std::vector<std::string>& args) -> std::string {
         if (!args.empty() && args[0] == "back") return "default";
         std::cout << "[beta mode]\n";
         return "";
     });
 
     // Test transitions
-    assert(mgr->getCurrentMode() == "default");
+    assert(cli->getCurrentMode() == "default");
 
-    std::string result = mgr->execute({"go-alpha"});
+    std::string result = cli->execute({"go-alpha"});
     assert(result == "alpha");
-    assert(mgr->getCurrentMode() == "alpha");
+    assert(cli->getCurrentMode() == "alpha");
     std::cout << "  ✓ Transition to alpha mode works\n";
 
     {
         CaptureOutput capture;
-        mgr->execute({"test"});
+        cli->execute({"test"});
         assert(capture.get().find("[alpha mode]") != std::string::npos);
     }
     std::cout << "  ✓ Commands execute in alpha mode\n";
 
-    result = mgr->execute({"back"});
+    result = cli->execute({"back"});
     assert(result == "default");
-    assert(mgr->getCurrentMode() == "default");
+    assert(cli->getCurrentMode() == "default");
     std::cout << "  ✓ Transition back to default mode works\n";
 
-    result = mgr->execute({"go-beta"});
+    result = cli->execute({"go-beta"});
     assert(result == "beta");
-    assert(mgr->getCurrentMode() == "beta");
+    assert(cli->getCurrentMode() == "beta");
     std::cout << "  ✓ Transition to beta mode works\n";
 
     std::cout << "\n";
 }
 
 // ============================================================================
-// Test 8: ModeManager addMode with Command (not dispatcher)
+// Test 8: CLI addMode with Command (not dispatcher)
 // ============================================================================
-void testModeManagerWithCommand() {
-    std::cout << "Test 8: ModeManager addMode with Command\n";
+void testCLIWithCommand() {
+    std::cout << "Test 8: CLI addMode with Command\n";
 
-    auto mgr = makeModeManager();
+    auto cli = makeCLI();
 
     // Create a command
     auto opts = makeOptions(
@@ -319,19 +319,19 @@ void testModeManagerWithCommand() {
     });
 
     // Add command as a mode
-    mgr->addMode("cmdmode", cmd);
-    mgr->setMode("cmdmode");
+    cli->addMode("cmdmode", cmd);
+    cli->setMode("cmdmode");
 
     // Execute in command mode
     {
         CaptureOutput capture;
-        mgr->execute({"--count", "42", "--name", "test"});
+        cli->execute({"--count", "42", "--name", "test"});
         assert(capture.get().find("[Command executed]") != std::string::npos);
     }
     assert(handlerCalled);
     assert(capturedCount == 42);
     assert(capturedName == "test");
-    std::cout << "  ✓ ModeManager with Command works\n";
+    std::cout << "  ✓ CLI with Command works\n";
 
     std::cout << "\n";
 }
@@ -628,17 +628,17 @@ void testCommandGetters() {
 }
 
 // ============================================================================
-// Test 17: ModeManager getModes
+// Test 17: CLI getModes
 // ============================================================================
-void testModeManagerGetModes() {
-    std::cout << "Test 17: ModeManager getModes\n";
+void testCLIGetModes() {
+    std::cout << "Test 17: CLI getModes\n";
 
-    auto mgr = makeModeManager();
-    mgr->addMode("alpha", [](const auto&) -> std::string { return ""; });
-    mgr->addMode("beta", [](const auto&) -> std::string { return ""; });
-    mgr->addMode("gamma", [](const auto&) -> std::string { return ""; });
+    auto cli = makeCLI();
+    cli->addMode("alpha", [](const auto&) -> std::string { return ""; });
+    cli->addMode("beta", [](const auto&) -> std::string { return ""; });
+    cli->addMode("gamma", [](const auto&) -> std::string { return ""; });
 
-    auto modes = mgr->getModes();
+    auto modes = cli->getModes();
     assert(modes.size() == 3);
 
     // Check all modes are present (order may vary due to map)
@@ -750,30 +750,30 @@ void testArrayRangeFiltering() {
 }
 
 // ============================================================================
-// Test 21: ModeManager executeCommand
+// Test 21: CLI executeCommand
 // ============================================================================
-void testModeManagerExecuteCommand() {
-    std::cout << "Test 21: ModeManager executeCommand\n";
+void testCLIExecuteCommand() {
+    std::cout << "Test 21: CLI executeCommand\n";
 
-    auto mgr = makeModeManager();
+    auto cli = makeCLI();
 
     bool handlerCalled = false;
     std::string lastCmd;
-    mgr->addMode("default", [&](const std::vector<std::string>& args) -> std::string {
+    cli->addMode("default", [&](const std::vector<std::string>& args) -> std::string {
         handlerCalled = true;
         if (!args.empty()) lastCmd = args[0];
         return "";
     });
 
     // Test executeCommand with string
-    std::string result = mgr->executeCommand("hello world");
+    std::string result = cli->executeCommand("hello world");
     assert(handlerCalled);
     assert(lastCmd == "hello");
     std::cout << "  ✓ executeCommand parses and executes string\n";
 
     // Test empty command
     handlerCalled = false;
-    result = mgr->executeCommand("");
+    result = cli->executeCommand("");
     assert(!handlerCalled);  // Empty command should not call handler
     assert(result == "");
     std::cout << "  ✓ executeCommand handles empty string\n";
@@ -944,7 +944,7 @@ int main() {
     testParsedArgsConstGet();
     testPartialRangeValidation();
     testModeTransitions();
-    testModeManagerWithCommand();
+    testCLIWithCommand();
     testShowMatchingCommands();
     testOptionSpecBaseDerived();
     testCommandParseConstArgv();
@@ -953,11 +953,11 @@ int main() {
     testPositionalArguments();
     testAllOptionConstructors();
     testCommandGetters();
-    testModeManagerGetModes();
+    testCLIGetModes();
     testSubcommandHelpFlags();
     testCommandInvoke();
     testArrayRangeFiltering();
-    testModeManagerExecuteCommand();
+    testCLIExecuteCommand();
     testShowHierarchyRangeDisplay();
     testParsedArgsHasOption();
     testGetAllOptionsInfo();

@@ -203,23 +203,23 @@ void testCommandShowHierarchy() {
     std::cout << "  PASSED\n\n";
 }
 
-void testModeManagerWithStreams() {
-    std::cout << "Test 9: ModeManager with custom streams\n";
+void testCLIWithStreams() {
+    std::cout << "Test 9: CLI with custom streams\n";
 
     std::stringstream out, err;
 
-    auto mgr = makeModeManager();
+    auto cli = makeCLI();
 
     // Add a stream-aware mode handler
-    mgr->addMode("test", [](const std::vector<std::string>& args,
+    cli->addMode("test", [](const std::vector<std::string>& args,
                             std::ostream& out,
                             std::ostream& err) -> std::string {
         out << "Test mode executed\n";
         return "";
     });
 
-    mgr->setMode("test");
-    mgr->execute({"somecommand"}, out, err);
+    cli->setMode("test");
+    cli->execute({"somecommand"}, out, err);
 
     assert(out.str().find("Test mode executed") != std::string::npos);
 
@@ -268,7 +268,7 @@ int main() {
     testStoredOutputContext();
     testDispatcherUnknownCommand();
     testCommandShowHierarchy();
-    testModeManagerWithStreams();
+    testCLIWithStreams();
     testFactoryWithContext();
 
     std::cout << "All tests passed!\n";

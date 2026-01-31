@@ -149,40 +149,40 @@ void testArgcArgvParsing() {
 }
 
 // ============================================================================
-// Test 5: ModeManager hasMode and edge cases
+// Test 5: CLI hasMode and edge cases
 // ============================================================================
-void testModeManagerEdgeCases() {
-    std::cout << "Test 5: ModeManager edge cases\n";
+void testCLIEdgeCases() {
+    std::cout << "Test 5: CLI edge cases\n";
 
-    auto mgr = makeModeManager();
+    auto cli = makeCLI();
 
-    mgr->addMode("alpha", [](const auto&) -> std::string { return ""; });
-    mgr->addMode("beta", [](const auto&) -> std::string { return ""; });
-    mgr->addMode("gamma", [](const auto&) -> std::string { return ""; });
+    cli->addMode("alpha", [](const auto&) -> std::string { return ""; });
+    cli->addMode("beta", [](const auto&) -> std::string { return ""; });
+    cli->addMode("gamma", [](const auto&) -> std::string { return ""; });
 
     // Test hasMode
-    assert(mgr->hasMode("alpha"));
-    assert(mgr->hasMode("beta"));
-    assert(!mgr->hasMode("nonexistent"));
+    assert(cli->hasMode("alpha"));
+    assert(cli->hasMode("beta"));
+    assert(!cli->hasMode("nonexistent"));
     std::cout << "  ✓ hasMode works correctly\n";
 
     // Test setMode with invalid mode
-    bool success = mgr->setMode("nonexistent");
+    bool success = cli->setMode("nonexistent");
     assert(!success);
     std::cout << "  ✓ setMode returns false for invalid mode\n";
 
     // Test exit command
-    auto result = mgr->execute({"exit"});
+    auto result = cli->execute({"exit"});
     assert(result == "exit");
     std::cout << "  ✓ exit command returns 'exit'\n";
 
     // Test quit command
-    result = mgr->execute({"quit"});
+    result = cli->execute({"quit"});
     assert(result == "exit");
     std::cout << "  ✓ quit command returns 'exit'\n";
 
     // Test empty args
-    result = mgr->execute({});
+    result = cli->execute({});
     assert(result == "");
     std::cout << "  ✓ Empty args returns empty string\n";
 
@@ -195,16 +195,16 @@ void testModeManagerEdgeCases() {
 void testAmbiguousPartialMatching() {
     std::cout << "Test 6: Ambiguous partial matching\n";
 
-    auto mgr = makeModeManager();
-    mgr->addMode("start", [](const auto&) -> std::string { return ""; });
-    mgr->addMode("stop", [](const auto&) -> std::string { return ""; });
-    mgr->addMode("status", [](const auto&) -> std::string { return ""; });
+    auto cli = makeCLI();
+    cli->addMode("start", [](const auto&) -> std::string { return ""; });
+    cli->addMode("stop", [](const auto&) -> std::string { return ""; });
+    cli->addMode("status", [](const auto&) -> std::string { return ""; });
 
     // Capture stderr for ambiguous match warning
     {
         std::stringstream errBuffer;
         auto oldErr = std::cerr.rdbuf(errBuffer.rdbuf());
-        mgr->execute({"mode", "st"});  // Ambiguous: start, stop, status
+        cli->execute({"mode", "st"});  // Ambiguous: start, stop, status
         std::cerr.rdbuf(oldErr);
         // Should print "Ambiguous mode"
         assert(errBuffer.str().find("Ambiguous") != std::string::npos ||
@@ -350,26 +350,26 @@ void testDispatcherShowHierarchy() {
 }
 
 // ============================================================================
-// Test 10: ModeManager showHierarchy
+// Test 10: CLI showHierarchy
 // ============================================================================
-void testModeManagerShowHierarchy() {
-    std::cout << "Test 10: ModeManager showHierarchy\n";
+void testCLIShowHierarchy() {
+    std::cout << "Test 10: CLI showHierarchy\n";
 
-    auto mgr = makeModeManager();
-    mgr->addMode("development", [](const auto&) -> std::string { return ""; });
-    mgr->addMode("production", [](const auto&) -> std::string { return ""; });
-    mgr->setMode("development");
+    auto cli = makeCLI();
+    cli->addMode("development", [](const auto&) -> std::string { return ""; });
+    cli->addMode("production", [](const auto&) -> std::string { return ""; });
+    cli->setMode("development");
 
     {
         CaptureOutput capture;
-        mgr->showHierarchy();
+        cli->showHierarchy();
         std::string output = capture.get();
         assert(output.find("Mode Manager Hierarchy") != std::string::npos);
         assert(output.find("development") != std::string::npos);
         assert(output.find("production") != std::string::npos);
         assert(output.find("(current)") != std::string::npos);
     }
-    std::cout << "  ✓ ModeManager showHierarchy works\n";
+    std::cout << "  ✓ CLI showHierarchy works\n";
 
     std::cout << "\n";
 }
@@ -447,13 +447,13 @@ void testParsedArgsTupleAccess() {
 void testUnknownModeHandling() {
     std::cout << "Test 13: Unknown mode handling\n";
 
-    auto mgr = makeModeManager();
-    mgr->addMode("valid", [](const auto&) -> std::string { return ""; });
+    auto cli = makeCLI();
+    cli->addMode("valid", [](const auto&) -> std::string { return ""; });
 
     {
         std::stringstream errBuffer;
         auto oldErr = std::cerr.rdbuf(errBuffer.rdbuf());
-        mgr->execute({"mode", "nonexistent"});
+        cli->execute({"mode", "nonexistent"});
         std::cerr.rdbuf(oldErr);
         assert(errBuffer.str().find("Unknown mode") != std::string::npos);
     }
@@ -629,15 +629,15 @@ void testSubcommandDispatcherArgcArgv() {
 }
 
 // ============================================================================
-// Test 20: ModeManager argc/argv execute
+// Test 20: CLI argc/argv execute
 // ============================================================================
-void testModeManagerArgcArgv() {
-    std::cout << "Test 20: ModeManager argc/argv execute\n";
+void testCLIArgcArgv() {
+    std::cout << "Test 20: CLI argc/argv execute\n";
 
-    auto mgr = makeModeManager();
+    auto cli = makeCLI();
 
     bool handlerCalled = false;
-    mgr->addMode("default", [&handlerCalled](const std::vector<std::string>& args) -> std::string {
+    cli->addMode("default", [&handlerCalled](const std::vector<std::string>& args) -> std::string {
         if (!args.empty() && args[0] == "test") {
             handlerCalled = true;
         }
@@ -646,20 +646,20 @@ void testModeManagerArgcArgv() {
 
     // Test execute with argc/argv
     char* argv[] = {const_cast<char*>("test")};
-    mgr->execute(1, argv);
+    cli->execute(1, argv);
     assert(handlerCalled);
-    std::cout << "  ✓ ModeManager argc/argv execute works\n";
+    std::cout << "  ✓ CLI argc/argv execute works\n";
 
     std::cout << "\n";
 }
 
 // ============================================================================
-// Test 21: ModeManager no handler for current mode
+// Test 21: CLI no handler for current mode
 // ============================================================================
-void testModeManagerNoHandler() {
-    std::cout << "Test 21: ModeManager no handler for current mode\n";
+void testCLINoHandler() {
+    std::cout << "Test 21: CLI no handler for current mode\n";
 
-    auto mgr = makeModeManager();
+    auto cli = makeCLI();
     // Set mode to something that doesn't exist (edge case - shouldn't happen normally)
     // We can't directly set an invalid mode, so we test the flow differently
 
@@ -671,16 +671,16 @@ void testModeManagerNoHandler() {
     // This can happen if the mode map is empty or current mode isn't in it
     // Default mode is "default" which won't be found initially
 
-    auto mgr2 = makeModeManager();
+    auto cli2 = makeCLI();
     // Don't add any modes - default mode won't have a handler
     {
         std::stringstream errBuffer;
         auto oldErr = std::cerr.rdbuf(errBuffer.rdbuf());
-        mgr2->execute({"somecommand"});  // No handler for "default" mode
+        cli2->execute({"somecommand"});  // No handler for "default" mode
         std::cerr.rdbuf(oldErr);
         assert(errBuffer.str().find("No handler for mode") != std::string::npos);
     }
-    std::cout << "  ✓ ModeManager no handler error displayed\n";
+    std::cout << "  ✓ CLI no handler error displayed\n";
 
     std::cout << "\n";
 }
@@ -731,12 +731,12 @@ void testIntArrayOptionRangeConstructors() {
 }
 
 // ============================================================================
-// Test 23: ModeManager addMode with SubcommandDispatcher
+// Test 23: CLI addMode with SubcommandDispatcher
 // ============================================================================
-void testModeManagerWithDispatcher() {
-    std::cout << "Test 23: ModeManager addMode with SubcommandDispatcher\n";
+void testCLIWithDispatcher() {
+    std::cout << "Test 23: CLI addMode with SubcommandDispatcher\n";
 
-    auto mgr = makeModeManager();
+    auto cli = makeCLI();
 
     // Create a dispatcher and add it as a mode
     auto dispatcher = makeDispatcher("git", "Git commands");
@@ -749,16 +749,16 @@ void testModeManagerWithDispatcher() {
     });
     dispatcher->addSubcommand(cmd);
 
-    mgr->addMode("git", dispatcher);
-    mgr->setMode("git");
+    cli->addMode("git", dispatcher);
+    cli->setMode("git");
 
     // Execute a command in git mode
     {
         CaptureOutput capture;
-        mgr->execute({"commit", "--message", "test"});
+        cli->execute({"commit", "--message", "test"});
         assert(capture.get().find("[commit executed]") != std::string::npos);
     }
-    std::cout << "  ✓ ModeManager with SubcommandDispatcher works\n";
+    std::cout << "  ✓ CLI with SubcommandDispatcher works\n";
 
     std::cout << "\n";
 }
@@ -937,12 +937,12 @@ int main() {
     testIntOptionRangeValidation();
     testParseSuccessFlag();
     testArgcArgvParsing();
-    testModeManagerEdgeCases();
+    testCLIEdgeCases();
     testAmbiguousPartialMatching();
     testSubcommandSpecificHelp();
     testCommandShowHierarchy();
     testDispatcherShowHierarchy();
-    testModeManagerShowHierarchy();
+    testCLIShowHierarchy();
     testIntegerParsingEdgeCases();
     testParsedArgsTupleAccess();
     testUnknownModeHandling();
@@ -952,10 +952,10 @@ int main() {
     testMakeOptionGroupNamed();
     testSubcommandDispatcherEmptyArgsAndGetters();
     testSubcommandDispatcherArgcArgv();
-    testModeManagerArgcArgv();
-    testModeManagerNoHandler();
+    testCLIArgcArgv();
+    testCLINoHandler();
     testIntArrayOptionRangeConstructors();
-    testModeManagerWithDispatcher();
+    testCLIWithDispatcher();
     testGetterTypeMismatch();
     testStringArrayOptionCoverage();
     testOptionGroupSize();

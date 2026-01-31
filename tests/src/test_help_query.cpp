@@ -75,10 +75,10 @@ int main() {
     
     std::cout << "\n";
     
-    // Test 2: ModeManager with ? query
-    std::cout << "Test 2: ModeManager mode queries\n";
+    // Test 2: CLI with ? query
+    std::cout << "Test 2: CLI mode queries\n";
     std::cout << "=================================\n";
-    auto modeManager = makeModeManager();
+    auto cli = makeCLI();
     
     auto devOpts = makeOptions(IntOption{"--debug", "Debug level", 0, 5});
     auto devSpec = CommandSpec{"dev", "Development mode", devOpts};
@@ -101,25 +101,25 @@ int main() {
         return true;
     });
     
-    modeManager->addMode("development", devCmd);
-    modeManager->addMode("production", prodCmd);
-    modeManager->addMode("testing", testCmd);
-    modeManager->setMode("development");
+    cli->addMode("development", devCmd);
+    cli->addMode("production", prodCmd);
+    cli->addMode("testing", testCmd);
+    cli->setMode("development");
     
     std::cout << "\nTest 2a: Query all modes with 'mode ?'\n";
-    modeManager->executeCommand("mode ?");
+    cli->executeCommand("mode ?");
     
     std::cout << "\nTest 2b: Query modes starting with 'mode dev?'\n";
-    modeManager->executeCommand("mode dev?");
+    cli->executeCommand("mode dev?");
     
     std::cout << "\nTest 2c: Query modes starting with 'mode p?'\n";
-    modeManager->executeCommand("mode p?");
+    cli->executeCommand("mode p?");
     
     std::cout << "\nTest 2d: Query modes starting with 'mode t?'\n";
-    modeManager->executeCommand("mode t?");
+    cli->executeCommand("mode t?");
     
     std::cout << "\nTest 2e: Query with no matches 'mode xyz?'\n";
-    modeManager->executeCommand("mode xyz?");
+    cli->executeCommand("mode xyz?");
     
     std::cout << "\nAll help query tests completed!\n";
     

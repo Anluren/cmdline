@@ -78,3 +78,7 @@ target_link_libraries(test_full_coverage PRIVATE cmdline_hdr_only)
 # Output stream tests
 add_executable(test_output_streams src/test_output_streams.cpp)
 target_link_libraries(test_output_streams PRIVATE cmdline_hdr_only)
+
+# Interactive CLI demo test
+add_executable(test_interactive_cli src/test_interactive_cli.cpp)
+target_link_libraries(test_interactive_cli PRIVATE cmdline_hdr_only)

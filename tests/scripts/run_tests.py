@@ -228,12 +228,12 @@ def main():
             "Test 2: IntOption range validation edge cases",
             "Test 3: ParsedArgs parseSuccess flag",
             "Test 4: Command argc/argv parsing",
-            "Test 5: ModeManager edge cases",
+            "Test 5: CLI edge cases",
             "Test 6: Ambiguous partial matching",
             "Test 7: SubcommandDispatcher specific help",
             "Test 8: Command showHierarchy",
             "Test 9: SubcommandDispatcher showHierarchy",
-            "Test 10: ModeManager showHierarchy",
+            "Test 10: CLI showHierarchy",
             "Test 11: Integer parsing edge cases",
             "Test 12: ParsedArgs typed tuple access",
             "Test 13: Unknown mode handling",
@@ -243,10 +243,10 @@ def main():
             "Test 17: makeOptionGroup named variant",
             "Test 18: SubcommandDispatcher empty args and getters",
             "Test 19: SubcommandDispatcher argc/argv execute",
-            "Test 20: ModeManager argc/argv execute",
-            "Test 21: ModeManager no handler for current mode",
+            "Test 20: CLI argc/argv execute",
+            "Test 21: CLI no handler for current mode",
             "Test 22: IntArrayOption range validation constructors",
-            "Test 23: ModeManager addMode with SubcommandDispatcher",
+            "Test 23: CLI addMode with SubcommandDispatcher",
             "Test 24: Type mismatch in getter functions",
             "Test 25: StringArrayOption full coverage",
             "Test 26: OptionGroup size() function",
@@ -268,7 +268,7 @@ def main():
             "Test 5: ParsedArgs const get<I>()",
             "Test 6: Partial range validation",
             "Test 7: Mode transitions returning new mode name",
-            "Test 8: ModeManager addMode with Command",
+            "Test 8: CLI addMode with Command",
             "Test 9: SubcommandDispatcher showMatchingCommands",
             "Test 10: OptionSpecBase derived() methods",
             "Test 11: Command::parse with const char* argv[]",
@@ -277,11 +277,11 @@ def main():
             "Test 14: Positional arguments",
             "Test 15: All option constructor variants",
             "Test 16: Command getters",
-            "Test 17: ModeManager getModes",
+            "Test 17: CLI getModes",
             "Test 18: SubcommandDispatcher help flags",
             "Test 19: Command invoke directly",
             "Test 20: Range filtering in arrays",
-            "Test 21: ModeManager executeCommand",
+            "Test 21: CLI executeCommand",
             "Test 22: Command showHierarchy range display",
             "Test 23: ParsedArgs hasOption",
             "Test 24: getAllOptions returns correct info",
@@ -289,6 +289,90 @@ def main():
             "All full coverage tests passed!"
         ]
     ))
+
+    # Test 11: Interactive CLI demo (with --test flag for automated mode)
+    print("Running interactive CLI demo tests...")
+    exe_path = TESTS_DIR / "test_interactive_cli"
+    if exe_path.exists():
+        try:
+            result = subprocess.run(
+                [str(exe_path), "--test"],
+                capture_output=True,
+                text=True,
+                timeout=5
+            )
+            stdout = result.stdout
+
+            expected = [
+                "Interactive CLI Demo",
+                "Running in test mode...",
+                "default> help",
+                "Available commands: git, docker, config",
+                "default> gi?",
+                "-> git",
+                "default> git",
+                "Entering git mode...",
+                "git> ad?",
+                "-> add",
+                "git> status",
+                "[git status]",
+                "On branch main",
+                "git> add files main.cpp test.cpp utils.h",
+                "[git add] Staging files:",
+                "+ main.cpp",
+                "+ test.cpp",
+                "+ utils.h",
+                "git> commit message",
+                "[git commit]",
+                'Message: "Initial commit"',
+                "Verbose: 1",
+                "git> mode docker",
+                "Switched to mode: docker",
+                "docker> ps",
+                "[docker ps]",
+                "docker> run image nginx name webserver ports 80 443",
+                "[docker run]",
+                "Image: nginx",
+                "Name: webserver",
+                "Ports: 80, 443",
+                "docker> mode config",
+                "Switched to mode: config",
+                "config> get key database.host",
+                "[config get]",
+                "database.host = <value>",
+                "config> set key app.debug value true",
+                "[config set]",
+                "app.debug = true",
+                "config> mode default",
+                "default> exit",
+                "Session ended.",
+                "Interactive CLI Demo completed!"
+            ]
+
+            all_found = True
+            missing = None
+            for exp in expected:
+                if exp not in stdout:
+                    all_found = False
+                    missing = exp
+                    break
+
+            if all_found:
+                results.append(TestResult("test_interactive_cli", True))
+            else:
+                results.append(TestResult(
+                    "test_interactive_cli", False,
+                    f"Expected '{missing}' not found in output"
+                ))
+        except subprocess.TimeoutExpired:
+            results.append(TestResult("test_interactive_cli", False, "Timed out"))
+        except Exception as e:
+            results.append(TestResult("test_interactive_cli", False, str(e)))
+    else:
+        results.append(TestResult(
+            "test_interactive_cli", False,
+            f"Executable not found: {exe_path}"
+        ))
 
     print()
     print("=" * 60)
