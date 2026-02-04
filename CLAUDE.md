@@ -23,6 +23,9 @@ python3 tests/scripts/run_tests.py
 
 # Run the example (from build directory)
 ./examples/example
+
+# Run interactive CLI test
+./tests/test_interactive_cli --test
 ```
 
 ## Architecture
@@ -40,8 +43,12 @@ This is a C++17 header-only command-line interface library using templates and c
 - `CommandSpec<OptGroup>` - compile-time command specification
 - `Command<OptGroup, HandlerType>` - command with typed options and handler
 - `SubcommandDispatcher` - manages multiple subcommands under a parent
-- `ModeManager` - handles mode transitions and command contexts
+- `CLI` - main interface for interactive applications (handles modes, transitions, command contexts)
 - `ParsedArgs<OptGroup>` - typed tuple storage for parsed arguments
+- `OutputContext` - holds output streams (stdout/stderr) for redirection
+- `TypedOptionValue<T>` - wrapper for option values with set/unset state
+
+Note: `ModeManager` is a legacy alias for `CLI`.
 
 ### Option Type System
 Options are strongly typed with CRTP base `OptionSpecBase<Derived>`:
@@ -52,13 +59,31 @@ Options are strongly typed with CRTP base `OptionSpecBase<Derived>`:
 
 Options are grouped with `OptionGroup<Opts...>` or `makeOptions(...)` and used to create `CommandSpec<OptGroup>`.
 
+### Handler Signatures
+Commands support two handler signatures:
+- Legacy: `bool(const ParsedArgs<OptGroup>&)` - simple handlers
+- Stream-aware: `bool(const ParsedArgs<OptGroup>&, std::ostream& out, std::ostream& err)` - for output redirection
+
+### Factory Functions
+- `makeCommand(spec, handler)` - create command from spec and handler
+- `makeCommand(spec, handler, ctx)` - create command with OutputContext
+- `makeDispatcher(name, description)` - create subcommand dispatcher
+- `makeDispatcher(name, description, ctx)` - create dispatcher with OutputContext
+- `makeCLI()` - create CLI instance
+- `makeCLI(ctx)` - create CLI with OutputContext
+- `makeOptions(...)` - create anonymous option group
+- `makeOptionGroup(name, description, ...)` - create named option group
+
 ### Key Features
 - Compile-time command validation with `static_assert`
-- Multi-level mode hierarchy with `ModeManager`
+- Multi-level mode hierarchy with `CLI`
 - Subcommand dispatch with `SubcommandDispatcher`
 - Help query syntax (`?` and `prefix?`)
 - Partial command matching with ambiguity detection
 - Integer parsing supports decimal, hex (0x), and binary (0b) formats
+- Configurable output streams via `OutputContext` for testing and redirection
+- Support for both legacy and stream-aware handler signatures
+- `executeCommand(string)` method for parsing command strings directly
 
 ## Test Structure
 
@@ -66,8 +91,15 @@ Tests are individual executables in `tests/src/`. Each test validates specific f
 
 Key test files:
 - `test_comprehensive_coverage.cpp` - edge cases and full API coverage
+- `test_full_coverage.cpp` - complete API coverage
 - `test_typed_options.cpp` - typed option handling
 - `test_mode_manager.cpp` - mode transitions
 - `test_subcommands.cpp` - subcommand dispatch
 - `test_help_query.cpp` - help query (`?`) syntax
 - `test_partial_matching.cpp` - partial command matching
+- `test_output_streams.cpp` - output stream redirection and OutputContext
+- `test_interactive_cli.cpp` - interactive CLI demo with tab completion
+- `test_default_values.cpp` - default value handling
+- `test_hierarchy.cpp` / `test_hierarchy_multi.cpp` - hierarchy display
+- `test_lambda_types.cpp` - lambda handler type deduction
+- `test_variadic_groups.cpp` - variadic option groups
