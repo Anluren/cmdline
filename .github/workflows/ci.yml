@@ -28,12 +28,12 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
         run: |
           sudo apt-get update
-          sudo apt-get install -y ninja-build
+          sudo apt-get install -y ninja-build cmake
 
       - name: Install dependencies (macOS)
         if: matrix.os == 'macos-latest'
         run: |
-          brew install ninja
+          brew install ninja cmake
 
       - name: Set up GCC (Ubuntu)
         if: matrix.os == 'ubuntu-latest' && matrix.compiler == 'gcc'
@@ -79,7 +79,7 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y ninja-build clang
+          sudo apt-get install -y ninja-build clang cmake
 
       - name: Configure with sanitizers
         run: |
