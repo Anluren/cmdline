@@ -17,6 +17,7 @@
 #define CMDLINE_TYPES_H
 
 
+#include <algorithm>
 #include <string_view>
 #include <array>
 #include <optional>
